@@ -1,0 +1,45 @@
+#!/bin/bash
+# Single-GPU Moving MNIST (video_jepa) benchmark on the `gpua` partition
+# (NVIDIA A100 SXM4 80GB). 80GB VRAM lets us push the batch size.
+#
+# Submit from this directory (so slurm_logs/ resolves):
+#   module load intel/slurm
+#   cd hpc/franklin && mkdir -p slurm_logs && sbatch benchmark_gpua.sbatch
+#SBATCH --job-name=vjepa-mmnist-a100
+#SBATCH --partition=gpua
+#SBATCH --gres=gpu:1
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=96G
+#SBATCH --time=02:00:00
+#SBATCH --output=slurm_logs/%x_%j.out
+#SBATCH --error=slurm_logs/%x_%j.err
+set -euo pipefail
+
+# --- Locations (override by exporting before `sbatch`) ---
+REPO_DIR="${EBJEPA_REPO:-$HOME/repositories/eb_jepa}"
+VENV="${EBJEPA_VENV:-$HOME/venvs/eb_jepa/.venv}"
+export EBJEPA_DSETS="${EBJEPA_DSETS:-$HOME/datasets/eb_jepa}"        # holds mnist_test_seq.npy
+export EBJEPA_CKPTS="${EBJEPA_CKPTS:-$HOME/eb_jepa_runs/checkpoints}"
+export TORCH_HOME="${TORCH_HOME:-$HOME/.cache/torch}"
+
+# --- Offline guards (compute nodes have no internet) ---
+export WANDB_MODE=offline
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+
+mkdir -p "$EBJEPA_CKPTS"
+source "$VENV/bin/activate"
+cd "$REPO_DIR"
+
+echo "Node: $(hostname)"
+nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+
+srun python -m examples.video_jepa.main \
+  --fname examples/video_jepa/cfgs/default.yaml \
+  logging.log_wandb=false \
+  logging.tqdm_silent=true \
+  data.batch_size=128 \
+  data.num_workers=8 \
+  optim.epochs=50

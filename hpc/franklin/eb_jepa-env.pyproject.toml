@@ -1,0 +1,61 @@
+# uv environment spec for the EB-JEPA Moving MNIST (video_jepa) benchmark on
+# the Franklin HPC cluster.
+#
+# Mirrors the reference environment at
+#   /home/emaballarin/tries/2026-03-02-envbuild/  (minilit.toml)
+# -- nightly PyTorch, uv-managed Python, in-home venv -- but:
+#   * CUDA is pinned to 12.8.x (cu128), NOT cu132. Franklin's GPU-node
+#     kernel-level NVIDIA drivers are incompatible with the CUDA 13+ runtime,
+#     so cu128 is the newest PyTorch nightly channel that loads against them.
+#   * Dependencies are trimmed to what the Moving MNIST import path needs and
+#     relaxed to `>=` (the heavy/fragile RL-sim deps are intentionally omitted).
+#
+# `eb_jepa` itself is installed editable (`-e . --no-deps`) by build_env.sh;
+# it does not appear here. This file is a "virtual" project (package = false):
+# uv installs the dependencies but does not try to build a package from it.
+
+[project]
+name = "eb-jepa-franklin-env"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = [
+    # PyTorch nightly (cu128) -- routed to the index via [tool.uv.sources] below
+    "torch",
+    "torchvision",
+    # Core numerics / config / IO used on the Moving MNIST path
+    "numpy>=2.0",
+    "einops>=0.8.1",
+    "fire>=0.7.0",
+    "omegaconf",
+    "ruamel.yaml",
+    "tqdm",
+    "wandb[media]>=0.21.1",
+    "opencv-python>=4.13.0.92",
+    "matplotlib>=3.10.3",
+    "seaborn",
+    "scikit-learn>=1.7.0",
+    "scikit-image",
+    "scipy",
+    "imageio",
+    "lpips>=0.1.4",
+    "h5py",
+    "huggingface-hub>=0.33.2",
+    "tiktoken>=0.13.0",
+    "transformers",
+    "submitit",
+]
+
+[tool.uv]
+package = false                      # virtual project: install deps, don't build it
+prerelease = "allow"
+index-strategy = "unsafe-best-match"
+python-preference = "only-managed"
+required-environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+
+[[tool.uv.index]]
+name = "pytorch-nightly-cu128"
+url = "https://download.pytorch.org/whl/nightly/cu128"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-nightly-cu128" }]
+torchvision = [{ index = "pytorch-nightly-cu128" }]
