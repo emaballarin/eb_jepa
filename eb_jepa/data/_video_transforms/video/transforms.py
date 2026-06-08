@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import math
 import numbers
 import random
@@ -46,9 +45,7 @@ def _pil_interp(method):
         return Image.BILINEAR
 
 
-def random_short_side_scale_jitter(
-    images, min_size, max_size, boxes=None, inverse_uniform_sampling=False
-):
+def random_short_side_scale_jitter(images, min_size, max_size, boxes=None, inverse_uniform_sampling=False):
     """
     Perform a spatial short scale jittering on the given images and
     corresponding boxes.
@@ -257,12 +254,8 @@ def clip_boxes_to_image(boxes, height, width):
             `num boxes` x 4.
     """
     clipped_boxes = boxes.copy()
-    clipped_boxes[:, [0, 2]] = np.minimum(
-        width - 1.0, np.maximum(0.0, boxes[:, [0, 2]])
-    )
-    clipped_boxes[:, [1, 3]] = np.minimum(
-        height - 1.0, np.maximum(0.0, boxes[:, [1, 3]])
-    )
+    clipped_boxes[:, [0, 2]] = np.minimum(width - 1.0, np.maximum(0.0, boxes[:, [0, 2]]))
+    clipped_boxes[:, [1, 3]] = np.minimum(height - 1.0, np.maximum(0.0, boxes[:, [1, 3]]))
     return clipped_boxes
 
 
@@ -475,9 +468,7 @@ def color_normalization(images, mean, stddev):
     return out_images
 
 
-def _get_param_spatial_crop(
-    scale, ratio, height, width, num_repeat=10, log_scale=True, switch_hw=False
-):
+def _get_param_spatial_crop(scale, ratio, height, width, num_repeat=10, log_scale=True, switch_hw=False):
     """
     Given scale, ratio, height and width, return sampled coordinates of the videos.
     """
@@ -785,9 +776,7 @@ class RandomResizedCropAndInterpolation:
 
     def __repr__(self):
         if isinstance(self.interpolation, (tuple, list)):
-            interpolate_str = " ".join(
-                [_pil_interpolation_to_str[x] for x in self.interpolation]
-            )
+            interpolate_str = " ".join([_pil_interpolation_to_str[x] for x in self.interpolation])
         else:
             interpolate_str = _pil_interpolation_to_str[self.interpolation]
         format_string = self.__class__.__name__ + "(size={0}".format(self.size)
@@ -832,10 +821,7 @@ class RandomHorizontalFlip(object):
             elif isinstance(clip[0], PIL.Image.Image):
                 return [img.transpose(PIL.Image.FLIP_LEFT_RIGHT) for img in clip]
             else:
-                raise TypeError(
-                    "Expected numpy.ndarray or PIL.Image"
-                    + " but got list of {0}".format(type(clip[0]))
-                )
+                raise TypeError("Expected numpy.ndarray or PIL.Image" + " but got list of {0}".format(type(clip[0])))
         return clip
 
 
@@ -914,17 +900,12 @@ class RandomCrop(object):
         elif isinstance(clip[0], PIL.Image.Image):
             im_w, im_h = clip[0].size
         else:
-            raise TypeError(
-                "Expected numpy.ndarray or PIL.Image"
-                + "but got list of {0}".format(type(clip[0]))
-            )
+            raise TypeError("Expected numpy.ndarray or PIL.Image" + "but got list of {0}".format(type(clip[0])))
         if w > im_w or h > im_h:
             error_msg = (
                 "Initial image size should be larger then "
                 "cropped size but got cropped sizes : ({w}, {h}) while "
-                "initial image is ({im_w}, {im_h})".format(
-                    im_w=im_w, im_h=im_h, w=w, h=h
-                )
+                "initial image is ({im_w}, {im_h})".format(im_w=im_w, im_h=im_h, w=w, h=h)
             )
             raise ValueError(error_msg)
 
@@ -962,10 +943,7 @@ class ThreeCrop(object):
         elif isinstance(clip[0], PIL.Image.Image):
             im_w, im_h = clip[0].size
         else:
-            raise TypeError(
-                "Expected numpy.ndarray or PIL.Image"
-                + "but got list of {0}".format(type(clip[0]))
-            )
+            raise TypeError("Expected numpy.ndarray or PIL.Image" + "but got list of {0}".format(type(clip[0])))
         if w != im_w and h != im_h:
             clip = FF.resize_clip(clip, self.size, interpolation="bilinear")
             im_h, im_w, im_c = clip[0].shape
@@ -996,11 +974,11 @@ class RandomRotation(object):
     def __init__(self, degrees):
         if isinstance(degrees, numbers.Number):
             if degrees < 0:
-                raise ValueError("If degrees is a single number," "must be positive")
+                raise ValueError("If degrees is a single number,must be positive")
             degrees = (-degrees, degrees)
         else:
             if len(degrees) != 2:
-                raise ValueError("If degrees is a sequence," "it must be of len 2.")
+                raise ValueError("If degrees is a sequence,it must be of len 2.")
 
         self.degrees = degrees
 
@@ -1020,10 +998,7 @@ class RandomRotation(object):
         elif isinstance(clip[0], PIL.Image.Image):
             rotated = [img.rotate(angle) for img in clip]
         else:
-            raise TypeError(
-                "Expected numpy.ndarray or PIL.Image"
-                + "but got list of {0}".format(type(clip[0]))
-            )
+            raise TypeError("Expected numpy.ndarray or PIL.Image" + "but got list of {0}".format(type(clip[0])))
 
         return rotated
 
@@ -1060,16 +1035,13 @@ class CenterCrop(object):
             im_w, im_h = clip[0].size
         else:
             raise TypeError(
-                "Expected numpy.ndarray or PIL.Image or torch.Tensor"
-                + "but got list of {0}".format(type(clip[0]))
+                "Expected numpy.ndarray or PIL.Image or torch.Tensor" + "but got list of {0}".format(type(clip[0]))
             )
         if w > im_w or h > im_h:
             error_msg = (
                 "Initial image size should be larger then "
                 "cropped size but got cropped sizes : ({w}, {h}) while "
-                "initial image is ({im_w}, {im_h})".format(
-                    im_w=im_w, im_h=im_h, w=w, h=h
-                )
+                "initial image is ({im_w}, {im_h})".format(im_w=im_w, im_h=im_h, w=w, h=h)
             )
             raise ValueError(error_msg)
 
@@ -1140,27 +1112,13 @@ class ColorJitter(object):
             # Create img transform function sequence
             img_transforms = []
             if brightness is not None:
-                img_transforms.append(
-                    lambda img: torchvision.transforms.functional.adjust_brightness(
-                        img, brightness
-                    )
-                )
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_brightness(img, brightness))
             if saturation is not None:
-                img_transforms.append(
-                    lambda img: torchvision.transforms.functional.adjust_saturation(
-                        img, saturation
-                    )
-                )
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_saturation(img, saturation))
             if hue is not None:
-                img_transforms.append(
-                    lambda img: torchvision.transforms.functional.adjust_hue(img, hue)
-                )
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_hue(img, hue))
             if contrast is not None:
-                img_transforms.append(
-                    lambda img: torchvision.transforms.functional.adjust_contrast(
-                        img, contrast
-                    )
-                )
+                img_transforms.append(lambda img: torchvision.transforms.functional.adjust_contrast(img, contrast))
             random.shuffle(img_transforms)
 
             # Apply to all images
@@ -1171,10 +1129,7 @@ class ColorJitter(object):
                 jittered_clip.append(jittered_img)
 
         else:
-            raise TypeError(
-                "Expected numpy.ndarray or PIL.Image"
-                + "but got list of {0}".format(type(clip[0]))
-            )
+            raise TypeError("Expected numpy.ndarray or PIL.Image" + "but got list of {0}".format(type(clip[0])))
         return jittered_clip
 
 
@@ -1204,6 +1159,4 @@ class Normalize(object):
         return FF.normalize(clip, self.mean, self.std)
 
     def __repr__(self):
-        return self.__class__.__name__ + "(mean={0}, std={1})".format(
-            self.mean, self.std
-        )
+        return self.__class__.__name__ + "(mean={0}, std={1})".format(self.mean, self.std)

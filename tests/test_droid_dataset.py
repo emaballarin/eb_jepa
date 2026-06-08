@@ -5,8 +5,8 @@ import os
 import pytest
 import torch
 
-# Import collate function for basic tests
 from eb_jepa.data.utils import traj_collate_fn
+# Import collate function for basic tests
 
 # Try to import DROID dataset (requires h5py, decord)
 try:
@@ -19,9 +19,7 @@ except ImportError as e:
     IMPORT_ERROR = str(e)
 
 
-@pytest.mark.skipif(
-    not DROID_AVAILABLE, reason="Requires h5py, decord, and DROID dataset"
-)
+@pytest.mark.skipif(not DROID_AVAILABLE, reason="Requires h5py, decord, and DROID dataset")
 @pytest.mark.skip(reason="Requires DROID dataset files to be present")
 class TestDROIDDataset:
     """Tests for DROID dataset loading and batching."""

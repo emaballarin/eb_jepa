@@ -2,7 +2,6 @@
 # All rights reserved.
 # The below code is inspired from TD-MPC2 https://github.com/nicklashansen/tdmpc2
 # licensed under the MIT License
-
 from collections import defaultdict
 
 import gym

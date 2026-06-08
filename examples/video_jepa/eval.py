@@ -4,8 +4,11 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import wandb
-from einops import rearrange, repeat
-from PIL import Image, ImageDraw, ImageFont
+from einops import rearrange
+from einops import repeat
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 from tqdm import tqdm
 
 
@@ -74,9 +77,7 @@ def visualize_videos(
 
     # Location predictions overlaid over rollout as blue heatmap
     loc_prediction = detection_head.head(rollout)
-    loc_prediction = F.interpolate(
-        loc_prediction, (x.shape[-2], x.shape[-1]), mode="nearest"
-    )
+    loc_prediction = F.interpolate(loc_prediction, (x.shape[-2], x.shape[-1]), mode="nearest")
     loc_prediction = repeat(loc_prediction, "b t h w -> b c t h w", c=3).clone()
     loc_prediction[:, :2].fill_(0)
 
@@ -103,9 +104,7 @@ def visualize_videos(
     for b in range(num_samples):
         videos = [row[b] for row in rows]
         videos = [scale_and_convert_to_uint8(video) for video in videos]
-        videos = [
-            add_label_to_video(video, label) for video, label in zip(videos, labels)
-        ]
+        videos = [add_label_to_video(video, label) for video, label in zip(videos, labels)]
         videos = [video.transpose(0, 3, 1, 2) for video in videos]
         viz_videos.append(np.concatenate(videos, axis=2))  # (T, C, 3*H, W)
 
@@ -152,9 +151,7 @@ def validation_loop(val_loader, jepa, detection_head, pixel_decoder, steps, devi
 
     # Aggregate val results and visualize last batch
     metrics = {k: float(np.mean(v)) for k, v in metrics.items()}
-    videos = visualize_videos(
-        batch, jepa, pixel_decoder, detection_head, num_samples=16
-    )
+    videos = visualize_videos(batch, jepa, pixel_decoder, detection_head, num_samples=16)
     logs = {
         **metrics,
         "viz": [wandb.Video(video, fps=4, format="mp4") for video in videos],

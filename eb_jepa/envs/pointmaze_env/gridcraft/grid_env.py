@@ -1,24 +1,20 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import sys
 
-import gym
 import gym.spaces
 import numpy as np
 
-from .grid_spec import (
-    LAVA,
-    RENDER_DICT,
-    REWARD,
-    REWARD2,
-    REWARD3,
-    REWARD4,
-    START,
-    TILES,
-    WALL,
-)
+from .grid_spec import LAVA
+from .grid_spec import RENDER_DICT
+from .grid_spec import REWARD
+from .grid_spec import REWARD2
+from .grid_spec import REWARD3
+from .grid_spec import REWARD4
+from .grid_spec import START
+from .grid_spec import TILES
+from .grid_spec import WALL
 
 ACT_NOOP = 0
 ACT_UP = 1
@@ -62,8 +58,7 @@ class TransitionModel(object):
         moves = {
             move
             for move in ACT_DICT
-            if not self.gs.out_of_bounds(xy + ACT_DICT[move])
-            and self.gs[xy + ACT_DICT[move]] != WALL
+            if not self.gs.out_of_bounds(xy + ACT_DICT[move]) and self.gs[xy + ACT_DICT[move]] != WALL
         }
         moves.add(ACT_NOOP)
         return moves

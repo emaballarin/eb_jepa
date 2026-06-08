@@ -3,7 +3,6 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
 """
 Dataset dimension and normalization registry for EB-JEPA environments.
 
@@ -105,10 +104,7 @@ def get_data_dims(env_name: str) -> tuple[int, int]:
     """
     env_lower = env_name.lower()
     if env_lower not in DATA_STATS:
-        raise KeyError(
-            f"Unknown environment: {env_name}. "
-            f"Available environments: {list(DATA_STATS.keys())}"
-        )
+        raise KeyError(f"Unknown environment: {env_name}. Available environments: {list(DATA_STATS.keys())}")
     stats = DATA_STATS[env_lower]
     return stats["action_dim"], stats["proprio_dim"]
 
@@ -127,8 +123,5 @@ def get_data_stats(env_name: str) -> dict:
     """
     env_lower = env_name.lower()
     if env_lower not in DATA_STATS:
-        raise KeyError(
-            f"Unknown environment: {env_name}. "
-            f"Available environments: {list(DATA_STATS.keys())}"
-        )
+        raise KeyError(f"Unknown environment: {env_name}. Available environments: {list(DATA_STATS.keys())}")
     return DATA_STATS[env_lower].copy()

@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import gym
 import numpy as np
 
@@ -24,27 +23,23 @@ class PushTWrapper(gym.Wrapper):
 
         def generate_state():
             if self.env.with_velocity:
-                return np.array(
-                    [
-                        rs.randint(50, 450),
-                        rs.randint(50, 450),
-                        rs.randint(100, 400),
-                        rs.randint(100, 400),
-                        rs.randn() * 2 * np.pi - np.pi,
-                        0,
-                        0,  # agent velocities default 0
-                    ]
-                )
+                return np.array([
+                    rs.randint(50, 450),
+                    rs.randint(50, 450),
+                    rs.randint(100, 400),
+                    rs.randint(100, 400),
+                    rs.randn() * 2 * np.pi - np.pi,
+                    0,
+                    0,  # agent velocities default 0
+                ])
             else:
-                return np.array(
-                    [
-                        rs.randint(50, 450),
-                        rs.randint(50, 450),
-                        rs.randint(100, 400),
-                        rs.randint(100, 400),
-                        rs.randn() * 2 * np.pi - np.pi,
-                    ]
-                )
+                return np.array([
+                    rs.randint(50, 450),
+                    rs.randint(50, 450),
+                    rs.randint(100, 400),
+                    rs.randint(100, 400),
+                    rs.randn() * 2 * np.pi - np.pi,
+                ])
 
         init_state = generate_state()
         goal_state = generate_state()

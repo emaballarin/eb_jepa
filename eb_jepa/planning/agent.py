@@ -1,27 +1,24 @@
-from __future__ import annotations
-
-from typing import Callable, Dict, Optional, Tuple
+from collections.abc import Callable
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from einops import rearrange
 
-from eb_jepa.planning.objectives import (
-    HierarchicalObjective,
-    ProjectedDistObjective,
-    ReprDistObjective,
-)
-from eb_jepa.planning.optimizers import (
-    AdamPlanner,
-    CEMPlanner,
-    GradientDescentPlanner,
-    H_PlanningResult,
-    HierarchicalPlanner,
-    MPPIPlanner,
-    Planner,
-    PlanningResult,
-)
+from eb_jepa.planning.objectives import HierarchicalObjective
+from eb_jepa.planning.objectives import ProjectedDistObjective
+from eb_jepa.planning.objectives import ReprDistObjective
+from eb_jepa.planning.optimizers import AdamPlanner
+from eb_jepa.planning.optimizers import CEMPlanner
+from eb_jepa.planning.optimizers import GradientDescentPlanner
+from eb_jepa.planning.optimizers import H_PlanningResult
+from eb_jepa.planning.optimizers import HierarchicalPlanner
+from eb_jepa.planning.optimizers import MPPIPlanner
+from eb_jepa.planning.optimizers import Planner
+from eb_jepa.planning.optimizers import PlanningResult
 from eb_jepa.utils.distributed import unwrap_model
 from eb_jepa.utils.logging import get_logger
 
@@ -111,9 +108,7 @@ class GCAgent:
             self._visual_decoders = visual_decoders
         else:
             self.visual_decoder = visual_decoder
-            self._visual_decoders = (
-                {1: visual_decoder} if visual_decoder is not None else {}
-            )
+            self._visual_decoders = {1: visual_decoder} if visual_decoder is not None else {}
         self._decode_fn = self._build_decode_fn()
 
         # Set default values if plan_cfg is None
@@ -124,9 +119,7 @@ class GCAgent:
             self._is_hierarchical = False
             logger.info("No plan_cfg provided in GCAgent, planner not initialized.")
         else:
-            self.decode_each_iteration = plan_cfg.planner.get(
-                "decode_each_iteration", False
-            )
+            self.decode_each_iteration = plan_cfg.planner.get("decode_each_iteration", False)
             self.num_act_stepped = plan_cfg.planner.get("num_act_stepped", 1)
             planner_type = plan_cfg.planner.get("type", "flat")
 
@@ -236,9 +229,7 @@ class GCAgent:
         )
         return stats
 
-    def _create_hierarchical_planner(
-        self, plan_cfg, action_dim: int
-    ) -> HierarchicalPlanner:
+    def _create_hierarchical_planner(self, plan_cfg, action_dim: int) -> HierarchicalPlanner:
         """Create a hierarchical planner with level planners using the new convention.
 
         Level Convention:
@@ -260,9 +251,7 @@ class GCAgent:
         num_levels = len(level_configs)
 
         if num_levels == 0:
-            raise ValueError(
-                "Hierarchical planner requires at least one level in level_configs"
-            )
+            raise ValueError("Hierarchical planner requires at least one level in level_configs")
 
         # Global defaults from plan_cfg.planner
         global_defaults = {
@@ -302,9 +291,7 @@ class GCAgent:
             elif hasattr(predictor, "action_proj"):
                 level_action_dim = predictor.action_proj.in_features
             else:
-                raise AttributeError(
-                    f"Cannot determine action_dim from {type(predictor).__name__}"
-                )
+                raise AttributeError(f"Cannot determine action_dim from {type(predictor).__name__}")
 
             # Load action statistics: from file for level > 1, preprocessor for level 1
             action_stats_kwargs = {}
@@ -312,12 +299,8 @@ class GCAgent:
             if l > 1:
                 stats_path = level_cfg.get("latent_action_stats_path", None)
                 if stats_path is not None:
-                    latent_actions = torch.load(stats_path, weights_only=False).to(
-                        self.device
-                    )
-                    latent_actions = latent_actions.reshape(
-                        -1, level_action_dim
-                    )  # [N, A_enc]
+                    latent_actions = torch.load(stats_path, weights_only=False).to(self.device)
+                    latent_actions = latent_actions.reshape(-1, level_action_dim)  # [N, A_enc]
                     action_stats_kwargs = self._build_action_stats(
                         latent_actions.mean(dim=0),
                         latent_actions.std(dim=0),
@@ -375,9 +358,7 @@ class GCAgent:
             verbose=verbose,
         )
 
-    def _unroll_at_level(
-        self, obs_init: torch.Tensor, actions: torch.Tensor, level: int
-    ) -> torch.Tensor:
+    def _unroll_at_level(self, obs_init: torch.Tensor, actions: torch.Tensor, level: int) -> torch.Tensor:
         """Unroll the model at a specific hierarchy level.
 
         Args:
@@ -398,15 +379,11 @@ class GCAgent:
         self.goal_state = goal_state
         # Unsqueeze the batch and time dimensions : C H W -> 1 C 1 H W
         self.goal_state_enc = self.model.encode(
-            self.preprocessor.normalize_obs(goal_state.to(self.device))
-            .unsqueeze(0)
-            .unsqueeze(2)
+            self.preprocessor.normalize_obs(goal_state.to(self.device)).unsqueeze(0).unsqueeze(2)
         )
         # Store init_state for diagnostic logging
         self._init_state = init_state
-        objective_name = self.plan_cfg.planner.planning_objective.get(
-            "objective_type", "repr_dist"
-        )
+        objective_name = self.plan_cfg.planner.planning_objective.get("objective_type", "repr_dist")
         objective_class = objective_name_map[objective_name]
 
         objective_kwargs = dict(self.plan_cfg.planner.planning_objective)
@@ -415,9 +392,7 @@ class GCAgent:
         if objective_name == "projected_dist":
             cost_module = getattr(self.model, "cost_module", None)
             if cost_module is None or not hasattr(cost_module, "projector"):
-                raise ValueError(
-                    "ProjectedDistObjective requires model.cost_module with a projector"
-                )
+                raise ValueError("ProjectedDistObjective requires model.cost_module with a projector")
             # Set projector to eval mode for planning (avoids BatchNorm issues)
             cost_module.projector.eval()
             objective_kwargs["projector"] = cost_module.projector
@@ -427,22 +402,12 @@ class GCAgent:
             # For hierarchical planning, use the coarsest level (max_level) config
             level_key = f"level_{num_levels}_planner"
             level_cfg = self.plan_cfg.planner.level_configs.get(level_key, {})
-            objective_kwargs.update(
-                {
-                    k: v
-                    for k, v in level_cfg.items()
-                    if k in ["distance", "sum_all_diffs"]
-                }
-            )
+            objective_kwargs.update({k: v for k, v in level_cfg.items() if k in ["distance", "sum_all_diffs"]})
 
         # Special handling for hierarchical objectives
         if objective_name == "hierarchical_repr_dist":
             # Encode goal at all hierarchy levels
-            goal_input = (
-                self.preprocessor.normalize_obs(goal_state.to(self.device))
-                .unsqueeze(0)
-                .unsqueeze(2)
-            )
+            goal_input = self.preprocessor.normalize_obs(goal_state.to(self.device)).unsqueeze(0).unsqueeze(2)
             target_encs = self.model.encode_hierarchical(goal_input)
 
             # Filter to only use levels up to start_level
@@ -466,9 +431,7 @@ class GCAgent:
             )
         elif objective_name == "hierarchical_projected_dist":
             # Get the underlying model (handle torch.compile wrapper)
-            model = (
-                self.model._orig_mod if hasattr(self.model, "_orig_mod") else self.model
-            )
+            model = self.model._orig_mod if hasattr(self.model, "_orig_mod") else self.model
 
             # Verify model has cost_modules
             if not hasattr(model, "cost_modules") or not model.cost_modules:
@@ -478,11 +441,7 @@ class GCAgent:
                 )
 
             # Encode goal at all hierarchy levels
-            goal_input = (
-                self.preprocessor.normalize_obs(goal_state.to(self.device))
-                .unsqueeze(0)
-                .unsqueeze(2)
-            )
+            goal_input = self.preprocessor.normalize_obs(goal_state.to(self.device)).unsqueeze(0).unsqueeze(2)
             target_encs = self.model.encode_hierarchical(goal_input)
 
             # Filter to only use levels up to start_level
@@ -514,15 +473,11 @@ class GCAgent:
                 goal_weight=objective_kwargs.get("goal_weight", 1.0),
             )
         else:
-            self.objective = objective_class(
-                target_enc=self.goal_state_enc, **objective_kwargs
-            )
+            self.objective = objective_class(target_enc=self.goal_state_enc, **objective_kwargs)
         self.planner.set_objective(self.objective)
 
         # [DIAG] Probe E: Encoding Health Check
-        verbose = (
-            self.plan_cfg.logging.get("verbose", False) if self.plan_cfg else False
-        )
+        verbose = self.plan_cfg.logging.get("verbose", False) if self.plan_cfg else False
         if self._is_hierarchical and self._init_state is not None and verbose:
             self._log_encoding_health_diagnostics(init_state)
 
@@ -537,19 +492,14 @@ class GCAgent:
         """
         # Encode init state at all hierarchy levels
         init_input = (
-            self.preprocessor.normalize_obs(init_state.to(self.device))
-            .unsqueeze(0)
-            .unsqueeze(2)
+            self.preprocessor.normalize_obs(init_state.to(self.device)).unsqueeze(0).unsqueeze(2)
         )  # [1, C, 1, H, W]
 
         with torch.no_grad():
             init_encs = self.model.encode_hierarchical(init_input)
 
         # Get goal encodings from the objective
-        goal_encs = {
-            level: obj.target_enc
-            for level, obj in self.objective.level_objectives.items()
-        }
+        goal_encs = {level: obj.target_enc for level, obj in self.objective.level_objectives.items()}
 
         logger.info("[DIAG] ========== ENCODING HEALTH CHECK ==========")
 
@@ -572,9 +522,7 @@ class GCAgent:
 
             # Distance and similarity
             l2_dist = (goal_enc - init_enc).pow(2).sum().sqrt().item()
-            cosine_sim = F.cosine_similarity(
-                goal_flat.unsqueeze(0), init_flat.unsqueeze(0)
-            ).item()
+            cosine_sim = F.cosine_similarity(goal_flat.unsqueeze(0), init_flat.unsqueeze(0)).item()
 
             logger.info(
                 f"[DIAG] Level {level}: "
@@ -600,9 +548,7 @@ class GCAgent:
                 nsteps = T_a - ctxt_window + 1.
         """
         batch_size = actions.shape[0]
-        ctxt_window = ctxt_window_time or (
-            self.plan_cfg["ctxt_window_time"] if self.plan_cfg else 1
-        )
+        ctxt_window = ctxt_window_time or (self.plan_cfg["ctxt_window_time"] if self.plan_cfg else 1)
         nsteps = actions.shape[2] - ctxt_window + 1
         if repeat_batch:
             obs_init = obs_init.repeat(batch_size, 1, 1, 1, 1)
@@ -617,9 +563,7 @@ class GCAgent:
         )
         return predicted_states
 
-    def unroll_at_levels(
-        self, obs_init, actions, levels, repeat_batch=True, ctxt_window_time=None
-    ):
+    def unroll_at_levels(self, obs_init, actions, levels, repeat_batch=True, ctxt_window_time=None):
         """Unroll the model at specific hierarchy levels.
 
         Args:
@@ -634,9 +578,7 @@ class GCAgent:
             Dict mapping level -> predicted states [B, D_l, T_l, H_l, W_l].
         """
         batch_size = actions.shape[0]
-        ctxt_window = ctxt_window_time or (
-            self.plan_cfg["ctxt_window_time"] if self.plan_cfg else 1
-        )
+        ctxt_window = ctxt_window_time or (self.plan_cfg["ctxt_window_time"] if self.plan_cfg else 1)
         nsteps = actions.shape[2] - ctxt_window + 1
         if repeat_batch:
             obs_init = obs_init.repeat(batch_size, 1, 1, 1, 1)
@@ -652,9 +594,7 @@ class GCAgent:
         )
         return predicted_states_dict
 
-    def decode_loc_to_pixel(
-        self, predicted_encs, prober=None, wall_x=None, door_y=None
-    ):
+    def decode_loc_to_pixel(self, predicted_encs, prober=None, wall_x=None, door_y=None):
         """Decode predicted encodings into frames using a position prober.
 
         Args:
@@ -670,24 +610,14 @@ class GCAgent:
         if prober is None:
             return None
         B, D, T, H, W = predicted_encs.shape
-        out = (
-            prober.apply_head(predicted_encs).permute(0, 2, 1).cpu()
-        )  # [B, T, probe_dim]
-        if (
-            self.preprocessor is not None
-            and out.shape[-1] == self.preprocessor.proprio_mean.shape[-1]
-        ):
+        out = prober.apply_head(predicted_encs).permute(0, 2, 1).cpu()  # [B, T, probe_dim]
+        if self.preprocessor is not None and out.shape[-1] == self.preprocessor.proprio_mean.shape[-1]:
             out = self.preprocessor.denormalize_proprios(out)  # [B, T, probe_dim]
         if hasattr(self.env, "coord_to_pixel"):
-            frames = self.env.coord_to_pixel(
-                out, wall_x=wall_x, door_y=door_y
-            )  # [B, T, C, H, W]
+            frames = self.env.coord_to_pixel(out, wall_x=wall_x, door_y=door_y)  # [B, T, C, H, W]
             frames = frames.permute(0, 1, 3, 4, 2).cpu().numpy()  # [B, T, H, W, C]
         else:
-            logger.warning(
-                "Environment does not support coord_to_pixel; "
-                "returning placeholder frames."
-            )
+            logger.warning("Environment does not support coord_to_pixel; returning placeholder frames.")
             B, T, _ = out.shape
             frames = np.zeros((B, T, 64, 64, 3), dtype=np.uint8)
         return frames
@@ -743,10 +673,7 @@ class GCAgent:
         actions = actions[: self.num_act_stepped]
         if self._action_frameskip > 1:
             actions = rearrange(actions, "t (f d) -> (t f) d", d=self._env_action_dim)
-        if (
-            self.preprocessor is not None
-            and getattr(self.preprocessor, "action_mean", None) is not None
-        ):
+        if self.preprocessor is not None and getattr(self.preprocessor, "action_mean", None) is not None:
             actions = self.preprocessor.denormalize_actions(actions)
         return actions.detach().cpu()
 

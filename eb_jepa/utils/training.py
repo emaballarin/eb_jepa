@@ -1,17 +1,23 @@
-from __future__ import annotations
-
 import copy
 import os
 import random
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import TYPE_CHECKING
+from typing import Union
 
 import numpy as np
 import torch
 import torch.nn as nn
-from omegaconf import DictConfig, OmegaConf
-from torch.amp import GradScaler, autocast
+from omegaconf import DictConfig
+from omegaconf import OmegaConf
+from torch.amp import autocast
+from torch.amp import GradScaler
 from torch.optim import Optimizer
 
 from eb_jepa.utils.config import load_config
@@ -34,11 +40,7 @@ def setup_amp(cfg, device: torch.device) -> tuple[torch.dtype, bool, GradScaler]
     use_amp = cfg.training.get("use_amp", True)
     use_scaler = use_amp and dtype == torch.float16
     scaler = GradScaler(device.type, enabled=use_scaler)
-    logger.info(
-        f"Using AMP with {dtype=}, scaler={'on' if use_scaler else 'off'}"
-        if use_amp
-        else "AMP disabled"
-    )
+    logger.info(f"Using AMP with {dtype=}, scaler={'on' if use_scaler else 'off'}" if use_amp else "AMP disabled")
     return dtype, use_amp, scaler
 
 
@@ -59,9 +61,7 @@ def optimizer_step(
         for opt in optimizers:
             scaler.unscale_(opt)
         if model is not None:
-            grad_norm = torch.nn.utils.clip_grad_norm_(
-                model.parameters(), max_norm=grad_clip
-            ).item()
+            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip).item()
     for opt in optimizers:
         scaler.step(opt)
     scaler.update()
@@ -178,9 +178,7 @@ def setup_wandb(
 
         try:
             run = wandb.init(**wandb_config)
-            logger.info(
-                f"Resumed W&B run: {existing_run_id} (existing config preserved)"
-            )
+            logger.info(f"Resumed W&B run: {existing_run_id} (existing config preserved)")
             return run
         except wandb.errors.UsageError:
             # Run doesn't exist anymore on W&B, create new one
@@ -233,23 +231,17 @@ def setup_eval_env(
     if cfg.meta.eval_every_itr <= 0:
         cfg.meta.eval_every_itr = num_batches
 
-    plan_cfg = OmegaConf.to_container(
-        load_config(cfg.eval.plan_cfg_path, plan_cfg_overrides, quiet=True)
-    )
+    plan_cfg = OmegaConf.to_container(load_config(cfg.eval.plan_cfg_path, plan_cfg_overrides, quiet=True))
     plan_cfg.setdefault("logging", {})
     plan_cfg["logging"].update(copy.deepcopy(dict(cfg.logging)))
 
-    eval_cfg_dict = OmegaConf.to_container(
-        load_config(cfg.eval.eval_cfg_path, eval_cfg_overrides, quiet=True)
-    )
+    eval_cfg_dict = OmegaConf.to_container(load_config(cfg.eval.eval_cfg_path, eval_cfg_overrides, quiet=True))
 
     from eb_jepa.data.utils import init_data
     from eb_jepa.envs import make_env_creator
 
     eval_env_name = eval_cfg_dict.get("data", {}).get("env_name", cfg.data.env_name)
-    _, eval_val_loader, env_config = init_data(
-        env_name=eval_env_name, cfg_data=dict(eval_cfg_dict.get("data", {}))
-    )
+    _, eval_val_loader, env_config = init_data(env_name=eval_env_name, cfg_data=dict(eval_cfg_dict.get("data", {})))
     num_eval_episodes = eval_cfg_dict.get("meta", {}).get("num_eval_episodes", 10)
     cfg_eval_env = eval_cfg_dict.get("env", {})
 
@@ -388,33 +380,21 @@ def build_hierarchical_param_groups(
         level = i + 1
         level_jepa = model.levels[i]
         modules = [level_jepa]
-        if (
-            model.action_regularizers is not None
-            and model.action_regularizers[i] is not None
-        ):
+        if model.action_regularizers is not None and model.action_regularizers[i] is not None:
             modules.append(model.action_regularizers[i])
-        params = [
-            p
-            for m in modules
-            for p in m.parameters()
-            if id(p) not in assigned and not assigned.add(id(p))
-        ]
+        params = [p for m in modules for p in m.parameters() if id(p) not in assigned and not assigned.add(id(p))]
         if params:
-            param_groups.append(
-                {
-                    "params": params,
-                    "name": f"level_{level}",
-                    "lr": base_lr * lr_scales.get(f"level_{level}", 1.0),
-                }
-            )
+            param_groups.append({
+                "params": params,
+                "name": f"level_{level}",
+                "lr": base_lr * lr_scales.get(f"level_{level}", 1.0),
+            })
 
     remaining = [p for p in model.parameters() if id(p) not in assigned]
     if remaining:
         param_groups.append({"params": remaining, "lr": base_lr, "name": "other"})
 
-    assert sum(len(g["params"]) for g in param_groups) == sum(
-        1 for _ in model.parameters()
-    )
+    assert sum(len(g["params"]) for g in param_groups) == sum(1 for _ in model.parameters())
     return param_groups
 
 
@@ -449,9 +429,7 @@ def compute_and_save_action_stats(
 
         latest_path = folder / f"level_{level}_action_stats.pt"
         if not force and latest_path.exists():
-            logger.info(
-                f"Action stats L{level}: skipped (already exists at {latest_path})"
-            )
+            logger.info(f"Action stats L{level}: skipped (already exists at {latest_path})")
             continue
 
         all_actions = []
@@ -462,9 +440,7 @@ def compute_and_save_action_stats(
                 _, a, _, _, _ = batch
                 a = a[:, :, :-1].to(device)  # [B, A, T-1]
                 actions_l = h_jepa.aggregate_actions(a, level)  # [B, A_enc, T_l-1]
-                all_actions.append(
-                    actions_l.permute(0, 2, 1).cpu()
-                )  # [B, T_l-1, A_enc]
+                all_actions.append(actions_l.permute(0, 2, 1).cpu())  # [B, T_l-1, A_enc]
 
         all_actions = torch.cat(all_actions, dim=0)  # [N, T_l, A_enc]
 

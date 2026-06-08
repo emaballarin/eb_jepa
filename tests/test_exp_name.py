@@ -3,12 +3,10 @@
 import pytest
 from omegaconf import OmegaConf
 
-from eb_jepa.utils.config import (
-    get_dataset_name,
-    get_exp_name,
-    get_unified_experiment_dir,
-    resolve_experiment_folder,
-)
+from eb_jepa.utils.config import get_dataset_name
+from eb_jepa.utils.config import get_exp_name
+from eb_jepa.utils.config import get_unified_experiment_dir
+from eb_jepa.utils.config import resolve_experiment_folder
 
 
 def _make_h_ac_cfg(**overrides):
@@ -104,19 +102,17 @@ def test_sweep_novel_param_appended():
 
 def test_ac_video_jepa_no_redundancy():
     """ac_video_jepa: swept regularizer params should not duplicate."""
-    cfg = OmegaConf.create(
-        {
-            "model": {
-                "encoder": {"architecture": "impala"},
-                "regularizer": {
-                    "cov_coeff": 10,
-                    "std_coeff": 5,
-                    "sim_coeff_t": 3,
-                    "idm_coeff": 1,
-                },
+    cfg = OmegaConf.create({
+        "model": {
+            "encoder": {"architecture": "impala"},
+            "regularizer": {
+                "cov_coeff": 10,
+                "std_coeff": 5,
+                "sim_coeff_t": 3,
+                "idm_coeff": 1,
             },
-        }
-    )
+        },
+    })
     param_grid = {
         "model.regularizer.cov_coeff": [10, 20],
         "model.regularizer.std_coeff": [5, 10],
@@ -166,9 +162,7 @@ def test_image_jepa_bcs_no_redundancy():
 
 def test_image_jepa_vicreg_no_redundancy():
     """image_jepa VICReg: swept proj dims and std/cov should not duplicate."""
-    cfg = _make_image_jepa_cfg(
-        loss={"type": "vicreg", "std_coeff": 1.0, "cov_coeff": 80.0}
-    )
+    cfg = _make_image_jepa_cfg(loss={"type": "vicreg", "std_coeff": 1.0, "cov_coeff": 80.0})
     param_grid = {
         "model.proj_output_dim": [1024, 2048],
         "loss.std_coeff": [1.0, 10.0],
@@ -226,21 +220,19 @@ def test_resolve_experiment_folder_explicit(tmp_path):
 
 def test_resolve_experiment_folder_auto(tmp_path, monkeypatch):
     monkeypatch.setenv("EBJEPA_CKPTS", str(tmp_path))
-    cfg = OmegaConf.create(
-        {
-            "meta": {"seed": 1},
-            "data": {"env_name": "two_rooms"},
-            "model": {
-                "encoder": {"architecture": "impala"},
-                "regularizer": {
-                    "cov_coeff": 8,
-                    "std_coeff": 16,
-                    "sim_coeff_t": 12,
-                    "idm_coeff": 1,
-                },
+    cfg = OmegaConf.create({
+        "meta": {"seed": 1},
+        "data": {"env_name": "two_rooms"},
+        "model": {
+            "encoder": {"architecture": "impala"},
+            "regularizer": {
+                "cov_coeff": 8,
+                "std_coeff": 16,
+                "sim_coeff_t": 12,
+                "idm_coeff": 1,
             },
-        }
-    )
+        },
+    })
     result_folder, exp_name = resolve_experiment_folder("ac_video_jepa", cfg)
     assert "two_rooms" in str(result_folder)
     assert "ac_video_jepa" in str(result_folder)

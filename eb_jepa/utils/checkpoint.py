@@ -1,13 +1,15 @@
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Union
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from eb_jepa.utils.distributed import unwrap_model, unwrap_state_dict
+from eb_jepa.utils.distributed import unwrap_model
+from eb_jepa.utils.distributed import unwrap_state_dict
 from eb_jepa.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -61,9 +63,7 @@ def _migrate_hjepa_state_dict(state_dict: Dict[str, Any]) -> Dict[str, Any]:
         "regularizers": "regularizer",
         "predcosts": "predcost",
     }
-    needs_migration = any(
-        k.startswith(prefix + ".") for k in state_dict for prefix in component_map
-    )
+    needs_migration = any(k.startswith(prefix + ".") for k in state_dict for prefix in component_map)
     if not needs_migration:
         return state_dict
 
@@ -76,19 +76,13 @@ def _migrate_hjepa_state_dict(state_dict: Dict[str, Any]) -> Dict[str, Any]:
                 parts = k.split(".", 2)
                 idx = parts[1]
                 rest = parts[2] if len(parts) > 2 else ""
-                new_key = (
-                    f"levels.{idx}.{singular}.{rest}"
-                    if rest
-                    else f"levels.{idx}.{singular}"
-                )
+                new_key = f"levels.{idx}.{singular}.{rest}" if rest else f"levels.{idx}.{singular}"
                 migrated += 1
                 break
         new_state[new_key] = v
 
     if migrated > 0:
-        logger.info(
-            f"Migrated {migrated} old-format HierarchicalJEPA state dict keys to new levels-based format"
-        )
+        logger.info(f"Migrated {migrated} old-format HierarchicalJEPA state dict keys to new levels-based format")
     return new_state
 
 
@@ -130,21 +124,13 @@ def load_checkpoint(
     msg = model.load_state_dict(state_dict, strict=strict)
     logger.info(f"Loaded model state from: {path} with msg: {msg}")
 
-    if (
-        load_optimizer
-        and optimizer is not None
-        and "optimizer_state_dict" in checkpoint
-    ):
+    if load_optimizer and optimizer is not None and "optimizer_state_dict" in checkpoint:
         msg = optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         logger.info(f"Restored optimizer state with msg: {msg}")
     elif not load_optimizer and optimizer is not None:
         logger.info("Skipped loading optimizer state (load_optimizer=False)")
 
-    if (
-        load_optimizer
-        and scheduler is not None
-        and "scheduler_state_dict" in checkpoint
-    ):
+    if load_optimizer and scheduler is not None and "scheduler_state_dict" in checkpoint:
         msg = scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         logger.info(f"Restored scheduler state with msg: {msg}")
     elif not load_optimizer and scheduler is not None:

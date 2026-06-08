@@ -20,11 +20,9 @@ import yaml
 from torch.utils.data import DistributedSampler
 from torch.utils.data.dataloader import default_collate
 
-from eb_jepa.data.two_rooms_dset import (
-    WallDataset,
-    WallDatasetConfig,
-    update_config_from_yaml,
-)
+from eb_jepa.data.two_rooms_dset import update_config_from_yaml
+from eb_jepa.data.two_rooms_dset import WallDataset
+from eb_jepa.data.two_rooms_dset import WallDatasetConfig
 from eb_jepa.utils.yaml import expand_env_vars
 
 DATASETS_DIR = Path(__file__).parent
@@ -139,9 +137,7 @@ def make_transform_from_config(merged_cfg: dict):
 
     return make_transforms(
         random_horizontal_flip=tcfg.get("random_horizontal_flip", False),
-        random_resize_aspect_ratio=tuple(
-            tcfg.get("random_resize_aspect_ratio", (1.0, 1.0))
-        ),
+        random_resize_aspect_ratio=tuple(tcfg.get("random_resize_aspect_ratio", (1.0, 1.0))),
         random_resize_scale=tuple(tcfg.get("random_resize_scale", (1.0, 1.0))),
         reprob=tcfg.get("reprob", 0.0),
         auto_augment=tcfg.get("auto_augment", False),
@@ -258,10 +254,7 @@ def init_data(env_name: str, cfg_data: dict = None, **kwargs):
     """
     _ensure_registered(env_name)
     if env_name not in DATASET_REGISTRY:
-        raise ValueError(
-            f"Unknown env: {env_name}. "
-            f"Registered datasets: {sorted(DATASET_REGISTRY.keys())}"
-        )
+        raise ValueError(f"Unknown env: {env_name}. Registered datasets: {sorted(DATASET_REGISTRY.keys())}")
 
     merged_cfg = load_env_data_config(env_name, cfg_data)
 

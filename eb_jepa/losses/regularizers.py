@@ -1,19 +1,16 @@
-from __future__ import annotations
-
 from typing import Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eb_jepa.losses.anticollapse import (
-    CovarianceLoss,
-    EppsPulley,
-    HingeStdLoss,
-    _sliced_epps_pulley,
-    _total_batch_size,
-)
-from eb_jepa.losses.prediction import InverseDynamicsLoss, TemporalSimilarityLoss
+from eb_jepa.losses.anticollapse import _sliced_epps_pulley
+from eb_jepa.losses.anticollapse import _total_batch_size
+from eb_jepa.losses.anticollapse import CovarianceLoss
+from eb_jepa.losses.anticollapse import EppsPulley
+from eb_jepa.losses.anticollapse import HingeStdLoss
+from eb_jepa.losses.prediction import InverseDynamicsLoss
+from eb_jepa.losses.prediction import TemporalSimilarityLoss
 
 
 class _IDM_Sim_Regularizer_Base(torch.nn.Module):
@@ -75,13 +72,9 @@ class _IDM_Sim_Regularizer_Base(torch.nn.Module):
 
         return x_unprojected, x_spatial, x_projected, b, c, t, h, w, c_out
 
-    def _compute_sim_idm(
-        self, x, x_unprojected, x_spatial, x_projected, actions, b, t, h, w, c_out
-    ):
+    def _compute_sim_idm(self, x, x_unprojected, x_spatial, x_projected, actions, b, t, h, w, c_out):
         """Compute shared sim_t and IDM losses."""
-        x_projected_reshaped = x_projected.permute(2, 0, 1, 3, 4).reshape(
-            t, b, -1
-        )  # [T, B, C_out*H*W]
+        x_projected_reshaped = x_projected.permute(2, 0, 1, 3, 4).reshape(t, b, -1)  # [T, B, C_out*H*W]
 
         if self.sim_t_after_proj:
             sim_loss_t = self.sim_loss_fn(x_projected_reshaped)
@@ -116,16 +109,10 @@ class _IDM_Sim_Regularizer_Base(torch.nn.Module):
 
         if self.spatial_as_samples:
             if self.pool_time:
-                return x_projected.reshape(
-                    1, b * t * h * w, c_out
-                )  # [1, B*T*H*W, C_out]
-            return x_projected.permute(1, 0, 2, 3, 4).reshape(
-                t, b * h * w, c_out
-            )  # [T, B*H*W, C_out]
+                return x_projected.reshape(1, b * t * h * w, c_out)  # [1, B*T*H*W, C_out]
+            return x_projected.permute(1, 0, 2, 3, 4).reshape(t, b * h * w, c_out)  # [T, B*H*W, C_out]
 
-        x_flat = x_projected.permute(0, 1, 4, 2, 3).reshape(
-            b, t, -1
-        )  # [B, T, C_out*H*W]
+        x_flat = x_projected.permute(0, 1, 4, 2, 3).reshape(b, t, -1)  # [B, T, C_out*H*W]
         d = x_flat.shape[-1]
         if self.pool_time:
             return x_flat.reshape(1, b * t, d)  # [1, B*T, C_out*H*W]
@@ -136,19 +123,13 @@ class _IDM_Sim_Regularizer_Base(torch.nn.Module):
         raise NotImplementedError
 
     def forward(self, x, actions=None):
-        x_unprojected, x_spatial, x_projected, b, c, t, h, w, c_out = self._preprocess(
-            x
-        )
+        x_unprojected, x_spatial, x_projected, b, c, t, h, w, c_out = self._preprocess(x)
         sim_loss_t, idm_loss = self._compute_sim_idm(
             x, x_unprojected, x_spatial, x_projected, actions, b, t, h, w, c_out
         )
-        ac_weighted, ac_unweighted, ac_dict = self._compute_anticollapse(
-            x_projected, b, t, h, w, c_out
-        )
+        ac_weighted, ac_unweighted, ac_dict = self._compute_anticollapse(x_projected, b, t, h, w, c_out)
 
-        total_weighted_loss = (
-            ac_weighted + self.sim_coeff_t * sim_loss_t + self.idm_coeff * idm_loss
-        )
+        total_weighted_loss = ac_weighted + self.sim_coeff_t * sim_loss_t + self.idm_coeff * idm_loss
         total_unweighted_loss = ac_unweighted + sim_loss_t + idm_loss
 
         loss_dict = {
@@ -177,9 +158,7 @@ class VC_IDM_Sim_Regularizer(_IDM_Sim_Regularizer_Base):
         self.cov_loss_fn = CovarianceLoss()
 
     def _compute_anticollapse(self, x_projected, b, t, h, w, c_out):
-        groups = self._get_x_for_anticollapse(
-            x_projected, b, t, h, w, c_out
-        )  # [G, N, D]
+        groups = self._get_x_for_anticollapse(x_projected, b, t, h, w, c_out)  # [G, N, D]
         g_std = []
         g_cov = []
         for g in range(groups.shape[0]):
@@ -214,9 +193,7 @@ class SIGReg_IDM_Sim_Regularizer(_IDM_Sim_Regularizer_Base):
         self.epps = EppsPulley()
 
     def _compute_anticollapse(self, x_projected, b, t, h, w, c_out):
-        groups = self._get_x_for_anticollapse(
-            x_projected, b, t, h, w, c_out
-        )  # [G, N, D]
+        groups = self._get_x_for_anticollapse(x_projected, b, t, h, w, c_out)  # [G, N, D]
         n_samples = groups.shape[1]
 
         if self._total_n is None:
@@ -224,9 +201,7 @@ class SIGReg_IDM_Sim_Regularizer(_IDM_Sim_Regularizer_Base):
 
         group_losses = []
         for g in range(groups.shape[0]):
-            loss_g, self.step = _sliced_epps_pulley(
-                groups[g], self.step, self.num_slices, self._total_n, self.epps
-            )
+            loss_g, self.step = _sliced_epps_pulley(groups[g], self.step, self.num_slices, self._total_n, self.epps)
             group_losses.append(loss_g)
         sigreg_loss = torch.stack(group_losses).mean()
 
@@ -255,9 +230,7 @@ class ActionVCRegularizer(nn.Module):
         self.std_loss_fn = HingeStdLoss(std_margin=std_margin)
         self.cov_loss_fn = CovarianceLoss()
 
-    def forward(
-        self, actions_encoded: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, dict]:
+    def forward(self, actions_encoded: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, dict]:
         """Compute variance-covariance regularization on encoded actions.
 
         Args:
@@ -297,9 +270,7 @@ class ActionSIGRegRegularizer(nn.Module):
         self._total_n = None
         self.epps = EppsPulley()
 
-    def forward(
-        self, actions_encoded: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, dict]:
+    def forward(self, actions_encoded: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, dict]:
         """Compute SIGReg regularization on encoded actions.
 
         Args:
@@ -316,9 +287,7 @@ class ActionSIGRegRegularizer(nn.Module):
 
         t_losses = []
         for ti in range(T):
-            loss_t, self.step = _sliced_epps_pulley(
-                x[ti], self.step, self.num_slices, self._total_n, self.epps
-            )
+            loss_t, self.step = _sliced_epps_pulley(x[ti], self.step, self.num_slices, self._total_n, self.epps)
             t_losses.append(loss_t)
         sigreg_loss = torch.stack(t_losses).mean()
 

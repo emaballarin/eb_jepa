@@ -4,10 +4,8 @@ import pytest
 import torch
 
 from eb_jepa.models.components import build_frame_causal_mask
-from eb_jepa.models.encoders import (
-    ViTCLSEncoder,
-    ViTEncoder,
-)
+from eb_jepa.models.encoders import ViTCLSEncoder
+from eb_jepa.models.encoders import ViTEncoder
 
 B, C, T, IMG = 2, 3, 4, 64
 PATCH = 16

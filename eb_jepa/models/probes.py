@@ -1,12 +1,11 @@
-from __future__ import annotations
-
 import math
 from typing import Optional
 
 import torch
 import torch.nn as nn
 
-from eb_jepa.models.nn import get_2d_sincos_pos_embed, init_vit_weights
+from eb_jepa.models.nn import get_2d_sincos_pos_embed
+from eb_jepa.models.nn import init_vit_weights
 
 
 class _PositionHeadMixin:

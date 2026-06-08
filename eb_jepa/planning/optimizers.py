@@ -1,6 +1,11 @@
 import functools
-from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, NamedTuple, Optional
+from abc import ABC
+from abc import abstractmethod
+from collections.abc import Callable
+from typing import Dict
+from typing import List
+from typing import NamedTuple
+from typing import Optional
 
 import numpy as np
 import torch
@@ -63,9 +68,7 @@ class Planner(ABC):
     ):
         pass
 
-    def cost_function(
-        self, actions: torch.Tensor, obs_init: torch.Tensor
-    ) -> torch.Tensor:
+    def cost_function(self, actions: torch.Tensor, obs_init: torch.Tensor) -> torch.Tensor:
         predicted_encs = self.unroll(obs_init, actions)
         return self.objective(predicted_encs)
 
@@ -158,25 +161,18 @@ class GradientDescentPlanner(Planner):
         if self.action_mean is not None:
             actions = self.action_mean.unsqueeze(0).expand(plan_length, -1).clone().to(
                 self.device
-            ) + self.action_std.unsqueeze(0).expand(plan_length, -1).to(
-                self.device
-            ) * torch.randn(
+            ) + self.action_std.unsqueeze(0).expand(plan_length, -1).to(self.device) * torch.randn(
                 plan_length, self.action_dim, device=self.device
             )
         elif self.sample_type == "randn":
-            actions = (
-                torch.randn(plan_length, self.action_dim, device=self.device)
-                * self.var_scale
-            )
+            actions = torch.randn(plan_length, self.action_dim, device=self.device) * self.var_scale
         elif self.sample_type == "zero":
             actions = torch.zeros(plan_length, self.action_dim, device=self.device)
         else:
             raise ValueError(f"Unknown sample_type: {self.sample_type}")
         return actions
 
-    def plan(
-        self, obs_init, steps_left=None, eval_mode=True, t0=False, plan_vis_path=None
-    ):
+    def plan(self, obs_init, steps_left=None, eval_mode=True, t0=False, plan_vis_path=None):
         """
         Plan a sequence of actions using gradient descent optimization.
 
@@ -201,9 +197,7 @@ class GradientDescentPlanner(Planner):
 
         # Setup optimizer
         if self.optimizer_type == "adam":
-            optimizer = torch.optim.Adam(
-                [actions], lr=self.lr, betas=self.adam_betas, eps=self.adam_eps
-            )
+            optimizer = torch.optim.Adam([actions], lr=self.lr, betas=self.adam_betas, eps=self.adam_eps)
         else:
             optimizer = torch.optim.SGD([actions], lr=self.lr)
 
@@ -231,9 +225,7 @@ class GradientDescentPlanner(Planner):
 
                 # Per-dimension-group clamping
                 if self.max_norms is not None and self.max_norm_dims is not None:
-                    actions_new = _clip_actions_per_group(
-                        actions_new, self.max_norms, self.max_norm_dims
-                    )
+                    actions_new = _clip_actions_per_group(actions_new, self.max_norms, self.max_norm_dims)
 
                 actions.copy_(actions_new)
 
@@ -241,9 +233,7 @@ class GradientDescentPlanner(Planner):
 
             if self.decode_each_iteration and self.decode_fn is not None:
                 with torch.no_grad():
-                    predicted_best_encs = self.unroll(
-                        obs_init, rearrange(actions, "t a -> 1 a t")
-                    )
+                    predicted_best_encs = self.unroll(obs_init, rearrange(actions, "t a -> 1 a t"))
                     pred_frames = self.decode_fn(predicted_best_encs)
                     pred_frames_over_iterations.append(pred_frames.squeeze(0))
 
@@ -306,9 +296,7 @@ class MPPIPlanner(Planner):
         self._prev_mean = None
         self.local_generator = None
 
-    def _compute_elite_weights(
-        self, elite_loss: torch.Tensor, min_cost: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_elite_weights(self, elite_loss: torch.Tensor, min_cost: torch.Tensor) -> torch.Tensor:
         """Compute normalized weights for elite actions.
 
         Args:
@@ -343,20 +331,14 @@ class MPPIPlanner(Planner):
             Selected action sequence [T, A].
         """
         score_np = score.cpu().numpy()
-        actions = elite_actions[
-            :, np.random.choice(np.arange(score_np.shape[0]), p=score_np)
-        ]  # [T, A]
+        actions = elite_actions[:, np.random.choice(np.arange(score_np.shape[0]), p=score_np)]  # [T, A]
         self._prev_mean = mean
         if not eval_mode:
-            actions += std * torch.randn(
-                self.action_dim, device=std.device, generator=self.local_generator
-            )
+            actions += std * torch.randn(self.action_dim, device=std.device, generator=self.local_generator)
         return actions
 
     @torch.no_grad()
-    def plan(
-        self, obs_init, t0=False, eval_mode=False, steps_left=None, plan_vis_path=None
-    ):
+    def plan(self, obs_init, t0=False, eval_mode=False, steps_left=None, plan_vis_path=None):
         """
         Args:
                 obs_init (torch.Tensor): Latent state from which to plan.
@@ -373,23 +355,11 @@ class MPPIPlanner(Planner):
             plan_length = min(self.plan_length, steps_left)
 
         if self.action_mean is not None:
-            mean = (
-                self.action_mean.unsqueeze(0)
-                .expand(plan_length, -1)
-                .clone()
-                .to(self.device)
-            )
-            std = (
-                self.action_std.unsqueeze(0)
-                .expand(plan_length, -1)
-                .clone()
-                .to(self.device)
-            )
+            mean = self.action_mean.unsqueeze(0).expand(plan_length, -1).clone().to(self.device)
+            std = self.action_std.unsqueeze(0).expand(plan_length, -1).clone().to(self.device)
         else:
             mean = torch.zeros(plan_length, self.action_dim, device=self.device)
-            std = self.max_std * torch.ones(
-                plan_length, self.action_dim, device=self.device
-            )
+            std = self.max_std * torch.ones(plan_length, self.action_dim, device=self.device)
         actions = torch.empty(
             plan_length,
             self.num_samples,
@@ -419,14 +389,10 @@ class MPPIPlanner(Planner):
 
             # Per-dimension-group clamping
             if self.max_norms is not None and self.max_norm_dims is not None:
-                actions = _clip_actions_per_group(
-                    actions, self.max_norms, self.max_norm_dims
-                )
+                actions = _clip_actions_per_group(actions, self.max_norms, self.max_norm_dims)
 
             # Compute costs
-            cost = self.cost_function(
-                rearrange(actions, "t b a -> b a t"), obs_init
-            ).unsqueeze(1)
+            cost = self.cost_function(rearrange(actions, "t b a -> b a t"), obs_init).unsqueeze(1)
             losses.append(cost.min().item())
 
             # Get elite actions
@@ -440,15 +406,12 @@ class MPPIPlanner(Planner):
             # Update parameters with momentum
             min_cost = cost.min(0)[0]
             score = self._compute_elite_weights(elite_loss, min_cost)
-            new_mean = torch.sum(
-                score.unsqueeze(0).unsqueeze(2) * elite_actions, dim=1
-            ) / (  # T B A
+            new_mean = torch.sum(score.unsqueeze(0).unsqueeze(2) * elite_actions, dim=1) / (  # T B A
                 score.sum(0) + 1e-9
             )
             new_std = torch.sqrt(
                 torch.sum(
-                    score.unsqueeze(0).unsqueeze(2)
-                    * (elite_actions - new_mean.unsqueeze(1)) ** 2,
+                    score.unsqueeze(0).unsqueeze(2) * (elite_actions - new_mean.unsqueeze(1)) ** 2,
                     dim=1,  # T B A
                 )
                 / (score.sum(0) + 1e-9)
@@ -456,9 +419,7 @@ class MPPIPlanner(Planner):
             mean = new_mean * (1 - self.momentum_mean) + mean * self.momentum_mean
             std = new_std * (1 - self.momentum_std) + std * self.momentum_std
             if self.decode_each_iteration and self.decode_fn is not None:
-                predicted_best_encs = self.unroll(
-                    obs_init, rearrange(mean, "t a -> 1 a t")
-                )
+                predicted_best_encs = self.unroll(obs_init, rearrange(mean, "t a -> 1 a t"))
                 pred_frames = self.decode_fn(predicted_best_encs)
                 pred_frames_over_iterations.append(pred_frames.squeeze(0))
                 # [T H W 3]: uint 8 in [0, 255]
@@ -521,9 +482,7 @@ class CEMPlanner(MPPIPlanner):
         )
         self.var_scale = var_scale
 
-    def _compute_elite_weights(
-        self, elite_loss: torch.Tensor, min_cost: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_elite_weights(self, elite_loss: torch.Tensor, min_cost: torch.Tensor) -> torch.Tensor:
         """Uniform weights over elites (CEM special case)."""
         num_elites = elite_loss.shape[0]
         return torch.ones(num_elites, device=elite_loss.device) / num_elites
@@ -626,9 +585,7 @@ class HierarchicalPlanner(Planner):
             H_PlanningResult with level_results dict (keys 1 to max_level).
             Executable actions are in level_results[1].
         """
-        level_results: Dict[int, Optional[PlanningResult]] = {
-            l: None for l in range(1, self.max_level + 1)
-        }
+        level_results: Dict[int, Optional[PlanningResult]] = {l: None for l in range(1, self.max_level + 1)}
         all_trajectories: Dict[int, torch.Tensor] = {}
         # Top-down planning: from start_level down to 1
         for level in range(self.start_level, 0, -1):
@@ -647,9 +604,7 @@ class HierarchicalPlanner(Planner):
                 )
             # For levels below the start level, set subgoals from the level above
             if level < self.start_level and (level + 1) in all_trajectories:
-                subgoals = self._extract_subgoals(
-                    all_trajectories[level + 1], level + 1, level
-                )
+                subgoals = self._extract_subgoals(all_trajectories[level + 1], level + 1, level)
                 self.objective.set_subgoals(level, subgoals)
                 if self.verbose:
                     logger.info(
@@ -661,26 +616,20 @@ class HierarchicalPlanner(Planner):
             self.objective.set_level(level)
 
             vis_path = f"{plan_vis_path}_level{level}" if plan_vis_path else None
-            result = planner.plan(
-                obs_init, steps_left=steps_left, t0=t0, plan_vis_path=vis_path
-            )
+            result = planner.plan(obs_init, steps_left=steps_left, t0=t0, plan_vis_path=vis_path)
             level_results[level] = result
 
             # Unroll to get trajectory for subgoal extraction
             actions_at_level = result.actions
             if self.verbose:
-                logger.info(
-                    f"Level {level}/{self.max_level}: actions {list(actions_at_level.shape)}"
-                )
+                logger.info(f"Level {level}/{self.max_level}: actions {list(actions_at_level.shape)}")
             if actions_at_level.dim() == 2:  # [T, A]
                 actions_at_level = rearrange(actions_at_level, "t a -> 1 a t")
 
             trajectory = planner.unroll(obs_init, actions_at_level)
             all_trajectories[level] = trajectory
             if self.verbose:
-                logger.info(
-                    f"Level {level}/{self.max_level}: trajectory {list(trajectory.shape)}"
-                )
+                logger.info(f"Level {level}/{self.max_level}: trajectory {list(trajectory.shape)}")
 
             # [DIAG] Subgoal Quality Analysis at the top planning level
             if self.verbose and level == self.start_level:
@@ -734,18 +683,13 @@ class HierarchicalPlanner(Planner):
         last_loss = losses[-1].item()
         loss_ratio = last_loss / (first_loss + 1e-8)
 
+        logger.info(f"[DIAG] ========== SUBGOAL QUALITY ANALYSIS (Level {level}) ==========")
         logger.info(
-            f"[DIAG] ========== SUBGOAL QUALITY ANALYSIS (Level {level}) =========="
-        )
-        logger.info(
-            f"[DIAG] MPPI Convergence: first_loss={first_loss:.4f}, "
-            f"last_loss={last_loss:.4f}, ratio={loss_ratio:.4f}"
+            f"[DIAG] MPPI Convergence: first_loss={first_loss:.4f}, last_loss={last_loss:.4f}, ratio={loss_ratio:.4f}"
         )
 
         # Get goal encoding at level 2
-        goal_enc = self.objective.level_objectives[
-            level
-        ].target_enc  # [1, D, 1, H', W']
+        goal_enc = self.objective.level_objectives[level].target_enc  # [1, D, 1, H', W']
 
         # trajectory shape: [B, D, T, H', W']
         # Index 0 = init encoding, index 1 = first predicted state (subgoal)
@@ -768,9 +712,7 @@ class HierarchicalPlanner(Planner):
             f"[DIAG] Distances: subgoal-init={subgoal_init_dist:.4f}, "
             f"subgoal-goal={subgoal_goal_dist:.4f}, init-goal={init_goal_dist:.4f}"
         )
-        logger.info(
-            f"[DIAG] Progress ratio (subgoal-goal / init-goal): {progress_ratio:.4f}"
-        )
+        logger.info(f"[DIAG] Progress ratio (subgoal-goal / init-goal): {progress_ratio:.4f}")
 
         # 6. Full trajectory progress: distance to goal at each timestep
         T = trajectory.shape[2]
@@ -780,9 +722,7 @@ class HierarchicalPlanner(Planner):
             dist_t = (enc_t - goal_enc).pow(2).sum().sqrt().item()
             traj_distances.append(dist_t)
 
-        logger.info(
-            f"[DIAG] Trajectory distances to goal: {[f'{d:.2f}' for d in traj_distances]}"
-        )
+        logger.info(f"[DIAG] Trajectory distances to goal: {[f'{d:.2f}' for d in traj_distances]}")
 
         # Check if trajectory diverges (distance increases over time)
         if len(traj_distances) > 1:

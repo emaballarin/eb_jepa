@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from typing import Optional, Tuple
+from typing import Optional
+from typing import Tuple
 
 import torch
 import torch.distributed as dist
@@ -208,9 +207,7 @@ class EppsPulley(nn.Module):
         self.register_buffer("phi", phi)
         self.register_buffer("w", w)
 
-    def forward(
-        self, x: torch.Tensor, total_batch_size: Optional[int] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, total_batch_size: Optional[int] = None) -> torch.Tensor:
         """Compute Epps-Pulley statistic.
 
         Args:
@@ -291,21 +288,15 @@ class BCS(nn.Module):
         if z2 is not None:
             if self._total_n is None:
                 self._total_n = _total_batch_size(z1.shape[0])
-            bcs1, _ = _sliced_epps_pulley(
-                z1, self.step, self.num_slices, self._total_n, self.epps
-            )
-            bcs2, self.step = _sliced_epps_pulley(
-                z2, self.step, self.num_slices, self._total_n, self.epps
-            )
+            bcs1, _ = _sliced_epps_pulley(z1, self.step, self.num_slices, self._total_n, self.epps)
+            bcs2, self.step = _sliced_epps_pulley(z2, self.step, self.num_slices, self._total_n, self.epps)
             bcs = (bcs1 + bcs2) / 2
             invariance_loss = F.mse_loss(z1, z2)
         else:
             pooled = z1.reshape(-1, z1.shape[-1])  # [V*B, D]
             if self._total_n is None:
                 self._total_n = _total_batch_size(pooled.shape[0])
-            bcs, self.step = _sliced_epps_pulley(
-                pooled, self.step, self.num_slices, self._total_n, self.epps
-            )
+            bcs, self.step = _sliced_epps_pulley(pooled, self.step, self.num_slices, self._total_n, self.epps)
             centroid = z1.mean(dim=0)  # [B, D]
             invariance_loss = (z1 - centroid).square().mean()
 

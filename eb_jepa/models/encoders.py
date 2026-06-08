@@ -1,19 +1,17 @@
-from __future__ import annotations
-
 import os
 import warnings
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eb_jepa.models.components import (
-    Projector,
-    _CTTransformer,
-    build_frame_causal_mask,
-)
-from eb_jepa.models.nn import TemporalBatchMixin, spatial_layer_norm
+from eb_jepa.models.components import _CTTransformer
+from eb_jepa.models.components import build_frame_causal_mask
+from eb_jepa.models.components import Projector
+from eb_jepa.models.nn import spatial_layer_norm
+from eb_jepa.models.nn import TemporalBatchMixin
 
 # Suppress xFormers availability warnings from DINOv2
 warnings.filterwarnings("ignore", message="xFormers is not available")
@@ -44,13 +42,9 @@ class ResnetStack(nn.Module):
         self.num_features = num_features
         self.num_blocks = num_blocks
         self.max_pooling = max_pooling
-        self.initial_conv = nn.Conv2d(
-            input_channels, num_features, kernel_size=3, padding=1
-        )
+        self.initial_conv = nn.Conv2d(input_channels, num_features, kernel_size=3, padding=1)
 
-        self.blocks = nn.ModuleList(
-            [ResnetBlock(num_features) for _ in range(num_blocks)]
-        )
+        self.blocks = nn.ModuleList([ResnetBlock(num_features) for _ in range(num_blocks)])
         if max_pooling:
             self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         else:
@@ -90,16 +84,14 @@ class ImpalaEncoder(nn.Module):
 
         input_channels = [input_channels] + list(stack_sizes)
 
-        self.stack_blocks = nn.ModuleList(
-            [
-                ResnetStack(
-                    input_channels=input_channels[i],
-                    num_features=stack_size * width,
-                    num_blocks=num_blocks,
-                )
-                for i, stack_size in enumerate(stack_sizes)
-            ]
-        )
+        self.stack_blocks = nn.ModuleList([
+            ResnetStack(
+                input_channels=input_channels[i],
+                num_features=stack_size * width,
+                num_blocks=num_blocks,
+            )
+            for i, stack_size in enumerate(stack_sizes)
+        ])
 
         self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate else nn.Identity()
 
@@ -140,7 +132,6 @@ class ImpalaEncoder(nn.Module):
         features = []
 
         for i in range(t):
-
             conv_out = x[i]
 
             for i, stack_block in enumerate(self.stack_blocks):
@@ -245,9 +236,7 @@ class _ViTBase(TemporalBatchMixin, nn.Module):
         if context_frames != 0:
             D = self.hidden_size
             G = self.grid_size
-            self.patch_embed = nn.Conv2d(
-                input_channels, D, kernel_size=patch_size, stride=patch_size
-            )
+            self.patch_embed = nn.Conv2d(input_channels, D, kernel_size=patch_size, stride=patch_size)
             self.temporal_pos = nn.Parameter(0.02 * torch.randn(1, max_seq_len, D))
             self.spatial_pos = nn.Parameter(0.02 * torch.randn(1, G * G, D))
             self.causal_transformer = _CTTransformer(
@@ -272,9 +261,7 @@ class _ViTBase(TemporalBatchMixin, nn.Module):
             self._cached_T = T
         return self._cached_mask.to(device)
 
-    def _extract_output(
-        self, tokens: torch.Tensor, B: int, T: int, G: int
-    ) -> torch.Tensor:
+    def _extract_output(self, tokens: torch.Tensor, B: int, T: int, G: int) -> torch.Tensor:
         """Extract final output from causal transformer tokens.
 
         Args:
@@ -365,9 +352,7 @@ class ViTEncoder(_ViTBase):
         x = spatial_layer_norm(x, self.final_ln)
         return x
 
-    def _extract_output(
-        self, tokens: torch.Tensor, B: int, T: int, G: int
-    ) -> torch.Tensor:
+    def _extract_output(self, tokens: torch.Tensor, B: int, T: int, G: int) -> torch.Tensor:
         """Reshape causal tokens to spatial grid, project, and normalize.
 
         Args:
@@ -453,9 +438,7 @@ class ViTCLSEncoder(_ViTBase):
         Returns:
             [B, output_dim, 1, 1]
         """
-        cls = self.vit(pixel_values=x, interpolate_pos_encoding=True).last_hidden_state[
-            :, 0
-        ]  # [B, hidden_size]
+        cls = self.vit(pixel_values=x, interpolate_pos_encoding=True).last_hidden_state[:, 0]  # [B, hidden_size]
         if self.projector is not None:
             cls = self.projector(cls)  # [B, output_dim]
         else:
@@ -463,9 +446,7 @@ class ViTCLSEncoder(_ViTBase):
             cls = self.final_ln(cls)  # [B, output_dim]
         return cls.unsqueeze(-1).unsqueeze(-1)  # [B, output_dim, 1, 1]
 
-    def _extract_output(
-        self, tokens: torch.Tensor, B: int, T: int, G: int
-    ) -> torch.Tensor:
+    def _extract_output(self, tokens: torch.Tensor, B: int, T: int, G: int) -> torch.Tensor:
         """Mean-pool patches per frame, project, and normalize.
 
         Args:
@@ -527,9 +508,7 @@ class DinoEncoder(TemporalBatchMixin, nn.Module):
             self.base_model = torch.hub.load("facebookresearch/dinov2", name)
         elif self.name.startswith("dinov3"):
             pretrained_ckpt_root = os.environ.get("EBJEPA_CKPTS")
-            dinov3_path = os.path.join(
-                os.environ.get("EBJEPA_HOME", os.path.expanduser("~")), "dinov3"
-            )
+            dinov3_path = os.path.join(os.environ.get("EBJEPA_HOME", os.path.expanduser("~")), "dinov3")
             if "vitl16" in self.name:
                 self.base_model = torch.hub.load(
                     dinov3_path,

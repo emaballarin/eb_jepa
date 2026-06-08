@@ -99,9 +99,7 @@ class TorchvisionResNet(nn.Module):
         self.backbone = build_fn()
         self.backbone.fc = nn.Identity()
         if image_size < 64:
-            self.backbone.conv1 = nn.Conv2d(
-                3, 64, kernel_size=3, stride=1, padding=2, bias=False
-            )
+            self.backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=2, bias=False)
             self.backbone.maxpool = nn.Identity()
         self.features_dim = RESNET_FEATURES_DIM[arch]
 
@@ -112,9 +110,7 @@ class TorchvisionResNet(nn.Module):
 class ImageSSL(nn.Module):
     """Image Self-Supervised Learning model implementation."""
 
-    def __init__(
-        self, backbone, features_dim, proj_hidden_dim=2048, proj_output_dim=2048
-    ):
+    def __init__(self, backbone, features_dim, proj_hidden_dim=2048, proj_output_dim=2048):
         super().__init__()
         self.backbone = backbone
         self.features_dim = features_dim
@@ -138,9 +134,7 @@ class ImageSSL(nn.Module):
         return features, projections
 
 
-def make_warmup_cosine_scheduler(
-    optimizer, warmup_epochs, max_epochs, warmup_start_lr, base_lr, min_lr
-):
+def make_warmup_cosine_scheduler(optimizer, warmup_epochs, max_epochs, warmup_start_lr, base_lr, min_lr):
     """Warmup + cosine annealing using built-in PyTorch schedulers."""
     from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
@@ -155,9 +149,7 @@ def make_warmup_cosine_scheduler(
         T_max=max(max_epochs - warmup_epochs, 1),
         eta_min=min_lr,
     )
-    return SequentialLR(
-        optimizer, schedulers=[warmup, cosine], milestones=[warmup_epochs]
-    )
+    return SequentialLR(optimizer, schedulers=[warmup, cosine], milestones=[warmup_epochs])
 
 
 def train_epoch(
@@ -191,9 +183,7 @@ def train_epoch(
     last_grad_norm = None
     num_batches = max_iterations if max_iterations is not None else len(train_loader)
 
-    pbar = tqdm(
-        train_loader, desc=f"Epoch {epoch}", disable=tqdm_silent, total=num_batches
-    )
+    pbar = tqdm(train_loader, desc=f"Epoch {epoch}", disable=tqdm_silent, total=num_batches)
     for batch_idx, (views, target) in enumerate(islice(pbar, num_batches)):
         num_views = len(views)
         target = target.to(device, non_blocking=True)
@@ -241,9 +231,7 @@ def train_epoch(
         _, predicted = linear_outputs.max(1)
         linear_correct_batch = predicted.eq(target).sum().item()
         _, top5_pred = linear_outputs.topk(5, dim=1)
-        linear_correct_top5_batch = (
-            top5_pred.eq(target.unsqueeze(1)).any(1).sum().item()
-        )
+        linear_correct_top5_batch = top5_pred.eq(target.unsqueeze(1)).any(1).sum().item()
 
         total_loss_batch = loss + linear_loss
 
@@ -259,9 +247,7 @@ def train_epoch(
             if num_views == 2:
                 rank_acc.accumulate("train/projector_effective_rank", z1.detach())
             else:
-                rank_acc.accumulate(
-                    "train/projector_effective_rank", z_stacked[0].detach()
-                )
+                rank_acc.accumulate("train/projector_effective_rank", z_stacked[0].detach())
 
         # Update metrics dynamically based on loss_dict keys
         for key, value in loss_dict.items():
@@ -276,13 +262,11 @@ def train_epoch(
         linear_correct_top5 += linear_correct_top5_batch
 
         # Update progress bar
-        pbar.set_postfix(
-            {
-                "Loss": f"{loss.item():.4f}",
-                "Linear": f"{linear_loss.item():.4f}",
-                "Acc": f"{100.*linear_correct/linear_total:.2f}%",
-            }
-        )
+        pbar.set_postfix({
+            "Loss": f"{loss.item():.4f}",
+            "Linear": f"{linear_loss.item():.4f}",
+            "Acc": f"{100.0 * linear_correct / linear_total:.2f}%",
+        })
 
     # Update learning rate (per-epoch only; per-step is handled in the loop)
     if not schedule_per_step:
@@ -342,9 +326,7 @@ def run(
     dataset_name = cfg.data.get("dataset", "cifar10")
     ds = DATASET_ABBREV.get(dataset_name, dataset_name)
     image_size, num_classes = get_dataset_info(dataset_name)
-    logger.info(
-        f"Loading {dataset_name} dataset (image_size={image_size}, num_classes={num_classes})..."
-    )
+    logger.info(f"Loading {dataset_name} dataset (image_size={image_size}, num_classes={num_classes})...")
 
     val_transforms = get_val_transforms(dataset_name)
 
@@ -353,12 +335,8 @@ def run(
     logger.info(f"Using data directory: {data_dir}")
 
     if dataset_name == "cifar10":
-        base_train_dataset = CIFAR10(
-            root=data_dir, train=True, download=True, transform=None
-        )
-        val_dataset = CIFAR10(
-            root=data_dir, train=False, download=True, transform=val_transforms
-        )
+        base_train_dataset = CIFAR10(root=data_dir, train=True, download=True, transform=None)
+        val_dataset = CIFAR10(root=data_dir, train=False, download=True, transform=val_transforms)
     elif dataset_name == "imagenet1k":
         train_dir = os.path.join(data_dir, "train")
         val_dir = os.path.join(data_dir, "val")
@@ -426,9 +404,7 @@ def run(
         from eb_jepa.models.encoders import ViTCLSEncoder
 
         features_dim = 384
-        backbone = ViTCLSEncoder(
-            scale="small", patch_size=patch_size, image_size=image_size
-        )
+        backbone = ViTCLSEncoder(scale="small", patch_size=patch_size, image_size=image_size)
     elif cfg.model.type == "vit_b":
         features_dim = 768
         model_kwargs = dict(
@@ -456,11 +432,7 @@ def run(
 
     # Log model structure and parameters
     encoder_params = sum(p.numel() for p in backbone.parameters())
-    projector_params = (
-        sum(p.numel() for p in model.projector.parameters())
-        if cfg.model.use_projector
-        else 0
-    )
+    projector_params = sum(p.numel() for p in model.projector.parameters()) if cfg.model.use_projector else 0
     log_model_info(model, {"encoder": encoder_params, "projector": projector_params})
 
     # Save and log configuration
@@ -471,9 +443,7 @@ def run(
     log_config(cfg)
 
     # Initialize linear probe
-    linear_probe = LinearProbe(feature_dim=features_dim, num_classes=num_classes).to(
-        device
-    )
+    linear_probe = LinearProbe(feature_dim=features_dim, num_classes=num_classes).to(device)
 
     dtype, use_amp, scaler = setup_amp(cfg, device)
 
@@ -535,9 +505,7 @@ def run(
         load_checkpoint_name=cfg.meta.get("load_checkpoint", "latest.pth.tar"),
     )
     if "linear_probe_state_dict" in ckpt_info:
-        linear_probe.load_state_dict(
-            unwrap_state_dict(ckpt_info["linear_probe_state_dict"])
-        )
+        linear_probe.load_state_dict(unwrap_state_dict(ckpt_info["linear_probe_state_dict"]))
 
     # Training loop
     logger.info(f"Starting training for {cfg.optim.epochs} epochs...")
@@ -586,9 +554,7 @@ def run(
         )
 
         # Evaluate linear probe on validation set
-        val_acc, val_acc_top5, val_loss = evaluate_linear_probe(
-            model, linear_probe, val_loader, device, use_amp
-        )
+        val_acc, val_acc_top5, val_loss = evaluate_linear_probe(model, linear_probe, val_loader, device, use_amp)
 
         # Log metrics - dynamically add train_ prefix to all train_metrics keys
         log_dict = {"epoch": epoch}

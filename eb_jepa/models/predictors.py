@@ -1,18 +1,14 @@
-from __future__ import annotations
-
 from typing import Optional
 
 import torch
 import torch.nn as nn
 
-from eb_jepa.models.components import (
-    ConvGRUCell,
-    ConvNeXtBlock,
-    MiniUNet,
-    Projector,
-    _CTTransformer,
-    build_frame_causal_mask,
-)
+from eb_jepa.models.components import _CTTransformer
+from eb_jepa.models.components import build_frame_causal_mask
+from eb_jepa.models.components import ConvGRUCell
+from eb_jepa.models.components import ConvNeXtBlock
+from eb_jepa.models.components import MiniUNet
+from eb_jepa.models.components import Projector
 from eb_jepa.models.nn import spatial_layer_norm
 
 
@@ -28,9 +24,9 @@ def _get_pos_embedding(pe: torch.Tensor, T: int) -> torch.Tensor:
     """
     if T <= pe.size(1):
         return pe[:, :T]
-    return torch.nn.functional.interpolate(
-        pe.permute(0, 2, 1), size=T, mode="linear", align_corners=False
-    ).permute(0, 2, 1)
+    return torch.nn.functional.interpolate(pe.permute(0, 2, 1), size=T, mode="linear", align_corners=False).permute(
+        0, 2, 1
+    )
 
 
 class RNNPredictor(nn.Module):
@@ -181,9 +177,7 @@ class CausalTransformerPredictor(nn.Module):
             nn.SiLU(),
             nn.Linear(action_hidden, input_dim),
         )
-        self.pos_embedding = nn.Parameter(
-            pos_embed_init_scale * torch.randn(1, max_seq_len, input_dim)
-        )
+        self.pos_embedding = nn.Parameter(pos_embed_init_scale * torch.randn(1, max_seq_len, input_dim))
         self.emb_dropout = nn.Dropout(emb_dropout)
         self.transformer = _CTTransformer(
             input_dim=input_dim,
@@ -314,12 +308,8 @@ class SpatialCausalTransformerPredictor(nn.Module):
 
         # Entry/exit projections: map between encoder space (input_dim)
         # and predictor operating space (pdim)
-        self.repr_proj_in = (
-            nn.Linear(input_dim, pdim) if pdim != input_dim else nn.Identity()
-        )
-        self.repr_proj_out = (
-            nn.Linear(pdim, input_dim) if pdim != input_dim else nn.Identity()
-        )
+        self.repr_proj_in = nn.Linear(input_dim, pdim) if pdim != input_dim else nn.Identity()
+        self.repr_proj_out = nn.Linear(pdim, input_dim) if pdim != input_dim else nn.Identity()
 
         # All internal components operate at pdim
         action_hidden = int(action_mlp_ratio * pdim)
@@ -328,12 +318,8 @@ class SpatialCausalTransformerPredictor(nn.Module):
             nn.SiLU(),
             nn.Linear(action_hidden, pdim),
         )
-        self.pos_embedding = nn.Parameter(
-            pos_embed_init_scale * torch.randn(1, max_seq_len, pdim)
-        )
-        self.spatial_pos_embedding = nn.Parameter(
-            0.02 * torch.randn(1, spatial_size * spatial_size, pdim)
-        )
+        self.pos_embedding = nn.Parameter(pos_embed_init_scale * torch.randn(1, max_seq_len, pdim))
+        self.spatial_pos_embedding = nn.Parameter(0.02 * torch.randn(1, spatial_size * spatial_size, pdim))
         self.final_ln = nn.LayerNorm(pdim) if final_ln else None
         self.emb_dropout = nn.Dropout(emb_dropout)
         self.transformer = _CTTransformer(
@@ -365,9 +351,7 @@ class SpatialCausalTransformerPredictor(nn.Module):
     def _get_mask(self, T: int, device: torch.device) -> torch.Tensor:
         """Get or build the frame-causal attention mask."""
         if self._cached_T != T or self._cached_mask is None:
-            self._cached_mask = build_frame_causal_mask(
-                T, self.spatial_size, self.spatial_size
-            )
+            self._cached_mask = build_frame_causal_mask(T, self.spatial_size, self.spatial_size)
             self._cached_T = T
         return self._cached_mask.to(device)
 
@@ -394,9 +378,7 @@ class SpatialCausalTransformerPredictor(nn.Module):
         x = self.repr_proj_in(x)  # [B, T, HW, pdim]
 
         # Add temporal + spatial positional embeddings (pdim)
-        x = (
-            x + _get_pos_embedding(self.pos_embedding, T)[:, :, None, :]
-        )  # [1, T, 1, pdim]
+        x = x + _get_pos_embedding(self.pos_embedding, T)[:, :, None, :]  # [1, T, 1, pdim]
         x = x + self.spatial_pos_embedding[:, None, :HW, :]  # [1, 1, HW, pdim]
 
         # Flatten to sequence: [B, T*HW, pdim]
@@ -407,9 +389,7 @@ class SpatialCausalTransformerPredictor(nn.Module):
         # Action embeddings: [B, T, A] -> [B, T, pdim] -> expand to [B, T*HW, pdim]
         a = actions.permute(0, 2, 1)  # [B, T, A]
         act_emb = self.action_embedder(a)  # [B, T, pdim]
-        act_emb = (
-            act_emb.unsqueeze(2).expand(-1, -1, HW, -1).reshape(B, T * HW, P)
-        )  # [B, T*HW, pdim]
+        act_emb = act_emb.unsqueeze(2).expand(-1, -1, HW, -1).reshape(B, T * HW, P)  # [B, T*HW, pdim]
 
         # Frame-causal attention mask
         mask = self._get_mask(T, x.device)
@@ -430,9 +410,7 @@ class SpatialCausalTransformerPredictor(nn.Module):
         if self.projector is not None:
             N = x.shape[0] * x.shape[1]
             D_proj = x.shape[-1]
-            x = self.projector(x.reshape(N, D_proj)).reshape(
-                B, T * HW, D_proj
-            )  # [B, T*HW, D]
+            x = self.projector(x.reshape(N, D_proj)).reshape(B, T * HW, D_proj)  # [B, T*HW, D]
 
         # Reshape back: [B, T*HW, D] -> [B, D, T, H, W]
         x = x.reshape(B, T, H, W, D).permute(0, 4, 1, 2, 3)  # [B, D, T, H, W]
@@ -493,9 +471,7 @@ class ConvGRUPredictor(nn.Module):
 
         a = action[:, :, 0]  # [B, A]
         a_proj = self.action_proj(a)  # [B, predictor_dim]
-        a_spatial = (
-            a_proj.unsqueeze(-1).unsqueeze(-1).expand(B, self.predictor_dim, H, W)
-        )  # [B, predictor_dim, H, W]
+        a_spatial = a_proj.unsqueeze(-1).unsqueeze(-1).expand(B, self.predictor_dim, H, W)  # [B, predictor_dim, H, W]
 
         h_new = self.cell(a_spatial, h)  # [B, predictor_dim, H, W]
 
@@ -544,9 +520,7 @@ class _SpatialGRUPredictorBase(nn.Module):
         self.action_proj = nn.Linear(action_dim, pd)
 
         combined_dim = 2 * pd
-        self.temporal_cell = ConvGRUCell(
-            hidden_dim=pd, input_dim=combined_dim, kernel_size=1
-        )
+        self.temporal_cell = ConvGRUCell(hidden_dim=pd, input_dim=combined_dim, kernel_size=1)
         self.proj_out = nn.Conv2d(pd, input_dim, 1)
         self.final_ln = nn.LayerNorm(input_dim) if final_ln else None
 
@@ -572,9 +546,7 @@ class _SpatialGRUPredictorBase(nn.Module):
         for t in range(T):
             s_t = self.proj_in(states[:, :, t])  # [B, pd, H, W]
             a_t = self.action_proj(actions[:, :, t])  # [B, pd]
-            a_spatial = (
-                a_t.unsqueeze(-1).unsqueeze(-1).expand(B, pd, H, W)
-            )  # [B, pd, H, W]
+            a_spatial = a_t.unsqueeze(-1).unsqueeze(-1).expand(B, pd, H, W)  # [B, pd, H, W]
 
             combined = torch.cat([s_t, a_spatial], dim=1)  # [B, 2*pd, H, W]
             mixed = self.mixer(combined)  # [B, 2*pd, H, W]
@@ -614,12 +586,9 @@ class ConvNeXtGRUPredictor(_SpatialGRUPredictorBase):
     ):
         super().__init__(input_dim, spatial_size, action_dim, predictor_dim, final_ln)
         combined_dim = 2 * predictor_dim
-        self.mixer = nn.Sequential(
-            *[
-                ConvNeXtBlock(combined_dim, spatial_size, expansion_ratio)
-                for _ in range(num_blocks)
-            ]
-        )
+        self.mixer = nn.Sequential(*[
+            ConvNeXtBlock(combined_dim, spatial_size, expansion_ratio) for _ in range(num_blocks)
+        ])
 
 
 class UNetGRUPredictor(_SpatialGRUPredictorBase):

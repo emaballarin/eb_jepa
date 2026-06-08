@@ -83,9 +83,7 @@ def run(
         folder: Experiment folder path (optional, auto-generated if not provided).
         **overrides: Config overrides in dot notation (e.g., model.henc=64).
     """
-    cfg, prefix_ovr = load_config_with_prefixed_overrides(
-        fname, cfg, ["plan_cfg", "eval_cfg"], **overrides
-    )
+    cfg, prefix_ovr = load_config_with_prefixed_overrides(fname, cfg, ["plan_cfg", "eval_cfg"], **overrides)
     plan_cfg_overrides = prefix_ovr["plan_cfg"]
     eval_cfg_overrides = prefix_ovr["eval_cfg"]
 
@@ -96,9 +94,7 @@ def run(
     logger.info(f"Experiment: {exp_name}")
     logger.info(f"Folder: {folder}")
 
-    loader, val_loader, data_config = init_data(
-        env_name=cfg.data.env_name, cfg_data=dict(cfg.data)
-    )
+    loader, val_loader, data_config = init_data(env_name=cfg.data.env_name, cfg_data=dict(cfg.data))
 
     # -- SETUP
     device = setup_device("auto")
@@ -187,9 +183,7 @@ def run(
         )
 
         predictor_type = cfg.model.get("predictor", {}).get("type", "rnn")
-        if not isinstance(
-            predictor, (ConvGRUPredictor, ConvNeXtGRUPredictor, UNetGRUPredictor)
-        ):
+        if not isinstance(predictor, (ConvGRUPredictor, ConvNeXtGRUPredictor, UNetGRUPredictor)):
             logger.warning(
                 f"Encoder has spatial output ({h}x{w}) but predictor '{predictor_type}' "
                 f"has no spatial interaction. Consider using predictor_type: conv_gru."
@@ -209,13 +203,9 @@ def run(
     # -- COST MODULE (optional, for planning objectives)
     cost_module = None
     skip_cost_module = False
-    if cfg.meta.get("eval_only_mode", False) and cfg.meta.get(
-        "skip_cost_module_at_eval", False
-    ):
+    if cfg.meta.get("eval_only_mode", False) and cfg.meta.get("skip_cost_module_at_eval", False):
         skip_cost_module = True
-        logger.info(
-            "Skipping cost module creation: skip_cost_module_at_eval=True in eval_only_mode"
-        )
+        logger.info("Skipping cost module creation: skip_cost_module_at_eval=True in eval_only_mode")
 
     if not skip_cost_module:
         cost_module = build_cost_module(
@@ -253,9 +243,7 @@ def run(
     if pos_mean is not None:
         pos_mean = pos_mean[probe_state_dims]
         pos_std = pos_std[probe_state_dims]
-        logger.info(
-            f"Probe Z-score stats: mean={pos_mean.tolist()}, " f"std={pos_std.tolist()}"
-        )
+        logger.info(f"Probe Z-score stats: mean={pos_mean.tolist()}, std={pos_std.tolist()}")
 
     xy_head, xy_prober = build_xy_prober(
         probe_cfg,
@@ -289,21 +277,12 @@ def run(
         # For DinoEncoder, unfreeze the learned projection on top of the
         # pretrained backbone so it can be trained (base_model stays frozen).
         if isinstance(jepa.encoder, DinoEncoder):
-            if hasattr(jepa.encoder, "proj") and not isinstance(
-                jepa.encoder.proj, nn.Identity
-            ):
+            if hasattr(jepa.encoder, "proj") and not isinstance(jepa.encoder.proj, nn.Identity):
                 jepa.encoder.proj.requires_grad_(True)
             jepa.encoder.final_ln.requires_grad_(True)
-        frozen_params = sum(
-            p.numel() for p in jepa.encoder.parameters() if not p.requires_grad
-        )
-        trainable_params = sum(
-            p.numel() for p in jepa.encoder.parameters() if p.requires_grad
-        )
-        logger.info(
-            f"Encoder frozen: {frozen_params} params frozen, "
-            f"{trainable_params} params trainable (projection)"
-        )
+        frozen_params = sum(p.numel() for p in jepa.encoder.parameters() if not p.requires_grad)
+        trainable_params = sum(p.numel() for p in jepa.encoder.parameters() if p.requires_grad)
+        logger.info(f"Encoder frozen: {frozen_params} params frozen, {trainable_params} params trainable (projection)")
 
     jepa_train_params = [p for p in jepa.parameters() if p.requires_grad]
     param_groups = [{"params": jepa_train_params, "lr": cfg.optim.lr}]
@@ -319,14 +298,8 @@ def run(
     # -- LOAD CKPT
     train_decoder_only = cfg.meta.get("train_decoder_only", False)
     if train_autoenc_only and visual_decoder is None:
-        raise RuntimeError(
-            "train_autoenc_only requires visual_decoder.enabled=true in config."
-        )
-    model_folder = (
-        cfg.meta.get("model_folder")
-        if train_decoder_only and cfg.meta.get("model_folder")
-        else None
-    )
+        raise RuntimeError("train_autoenc_only requires visual_decoder.enabled=true in config.")
+    model_folder = cfg.meta.get("model_folder") if train_decoder_only and cfg.meta.get("model_folder") else None
     eval_only = cfg.meta.get("eval_only_mode", False)
     start_epoch, ckpt_info = resume_training(
         folder,
@@ -344,9 +317,7 @@ def run(
         if "xy_head_state_dict" in ckpt_info:
             xy_head.load_state_dict(unwrap_state_dict(ckpt_info["xy_head_state_dict"]))
         if "visual_decoder_state_dict" in ckpt_info and visual_decoder is not None:
-            visual_decoder.load_state_dict(
-                unwrap_state_dict(ckpt_info["visual_decoder_state_dict"])
-            )
+            visual_decoder.load_state_dict(unwrap_state_dict(ckpt_info["visual_decoder_state_dict"]))
         if not skip_cost_module and not train_decoder_only:
             if "probe_optimizer_state_dict" in ckpt_info:
                 probe_optimizer.load_state_dict(ckpt_info["probe_optimizer_state_dict"])
@@ -365,9 +336,7 @@ def run(
 
     # Log what happened with cost module
     if skip_cost_module and ckpt_info.get("resumed", False):
-        logger.info(
-            "Loaded checkpoint without cost module (encoder/predictor weights only)"
-        )
+        logger.info("Loaded checkpoint without cost module (encoder/predictor weights only)")
 
     # -- EVAL ONLY MODE
     if cfg.meta.get("eval_only_mode", False):
@@ -402,19 +371,13 @@ def run(
                     loader=eval_loader,
                     prober=xy_prober,
                     plan_cfg=plan_cfg,
-                    visual_decoders=(
-                        {1: visual_decoder} if visual_decoder is not None else None
-                    ),
+                    visual_decoders=({1: visual_decoder} if visual_decoder is not None else None),
                 )
             )
             if "success_rate" in eval_results:
-                logger.info(
-                    f"Evaluation complete. Success rate: {eval_results['success_rate']:.2%}"
-                )
+                logger.info(f"Evaluation complete. Success rate: {eval_results['success_rate']:.2%}")
             elif "ate/end_distance" in eval_results:
-                logger.info(
-                    f"Evaluation complete. ATE: {eval_results['ate/end_distance']:.4f}"
-                )
+                logger.info(f"Evaluation complete. ATE: {eval_results['ate/end_distance']:.4f}")
         else:
             logger.info("Unroll evaluation complete (plan eval skipped).")
         return eval_results
@@ -460,27 +423,21 @@ def run(
                 jepa_optimizer.zero_grad()
                 probe_optimizer.zero_grad()
                 with autocast(device.type, enabled=use_amp, dtype=dtype):
-                    _, enc_states, (jepa_loss, regl, regl_unweight, regldict, pl) = (
-                        jepa(
-                            x,
-                            a,
-                            nsteps=0,
-                            unroll_mode="parallel",
-                            compute_loss=True,
-                            return_all_steps=False,
-                        )
+                    _, enc_states, (jepa_loss, regl, regl_unweight, regldict, pl) = jepa(
+                        x,
+                        a,
+                        nsteps=0,
+                        unroll_mode="parallel",
+                        compute_loss=True,
+                        return_all_steps=False,
                     )
                     # Reconstruction (NOT detached: gradients flow to encoder)
                     decoded = visual_decoder(enc_states)  # [B, C, T, H, W]
                     T_min = min(decoded.shape[2], x.shape[2])
                     if lpips_loss is not None:
-                        vd_loss_total = lpips_loss(
-                            decoded[:, :, :T_min], x[:, :, :T_min]
-                        )
+                        vd_loss_total = lpips_loss(decoded[:, :, :T_min], x[:, :, :T_min])
                     else:
-                        vd_loss_total = nn.MSELoss()(
-                            decoded[:, :, :T_min], x[:, :, :T_min]
-                        )
+                        vd_loss_total = nn.MSELoss()(decoded[:, :, :T_min], x[:, :, :T_min])
                     # XY probe on all GT timesteps (detached from encoder)
                     probe_output = xy_head(enc_states.detach())  # [B, output_dim, T]
                     probe_targets = unwrap_model(xy_head).normalize_targets(loc)
@@ -491,9 +448,7 @@ def run(
 
                 scaler.scale(total_loss).backward()
                 grad_clip = cfg.optim.get("grad_clip")
-                jepa_grad_norm = optimizer_step(
-                    scaler, [jepa_optimizer, probe_optimizer], jepa_module, grad_clip
-                )
+                jepa_grad_norm = optimizer_step(scaler, [jepa_optimizer, probe_optimizer], jepa_module, grad_clip)
                 jepa_scheduler.step()
                 probe_scheduler.step()
             elif train_decoder_only:
@@ -540,30 +495,22 @@ def run(
                 jepa_optimizer.zero_grad()
                 with autocast(device.type, enabled=use_amp, dtype=dtype):
                     rollout_cfg = cfg.model.get("rollout", {})
-                    _, enc_states, (jepa_loss, regl, regl_unweight, regldict, pl) = (
-                        jepa(
-                            x,
-                            a,
-                            nsteps=rollout_cfg.nsteps,
-                            unroll_mode=rollout_cfg.get(
-                                "unroll_mode", "autoregressive"
-                            ),
-                            ctxt_window_time=rollout_cfg.get("ctxt_window_time", 1),
-                            compute_loss=True,
-                            return_all_steps=False,
-                            stop_gradient=rollout_cfg.get("stop_gradient", False),
-                            detach_pred_target=rollout_cfg.get(
-                                "detach_pred_target", False
-                            ),
-                        )
+                    _, enc_states, (jepa_loss, regl, regl_unweight, regldict, pl) = jepa(
+                        x,
+                        a,
+                        nsteps=rollout_cfg.nsteps,
+                        unroll_mode=rollout_cfg.get("unroll_mode", "autoregressive"),
+                        ctxt_window_time=rollout_cfg.get("ctxt_window_time", 1),
+                        compute_loss=True,
+                        return_all_steps=False,
+                        stop_gradient=rollout_cfg.get("stop_gradient", False),
+                        detach_pred_target=rollout_cfg.get("detach_pred_target", False),
                     )
                     total_loss += jepa_loss
 
                 scaler.scale(jepa_loss).backward()
                 grad_clip = cfg.optim.get("grad_clip")
-                jepa_grad_norm = optimizer_step(
-                    scaler, jepa_optimizer, jepa_module, grad_clip
-                )
+                jepa_grad_norm = optimizer_step(scaler, jepa_optimizer, jepa_module, grad_clip)
                 jepa_scheduler.step()
 
                 # Calculate probe loss on all timesteps
@@ -601,19 +548,15 @@ def run(
                 with torch.no_grad():
                     enc = enc_states.detach()  # [B, D, T, H', W']
                     D = enc.shape[1]
-                    flat_enc = enc.permute(0, 2, 3, 4, 1).reshape(
-                        -1, D
-                    )  # [B*T*H'*W', D]
+                    flat_enc = enc.permute(0, 2, 3, 4, 1).reshape(-1, D)  # [B*T*H'*W', D]
                     rank_acc.accumulate("train/visual_effective_rank", flat_enc)
 
             # Update progress bar
-            pbar.set_postfix(
-                {
-                    "loss": f"{total_loss.item():.4f}",
-                    "reg": f"{regl.item():.4f}",
-                    "pred": f"{pl.item():.4f}",
-                }
-            )
+            pbar.set_postfix({
+                "loss": f"{total_loss.item():.4f}",
+                "reg": f"{regl.item():.4f}",
+                "pred": f"{pl.item():.4f}",
+            })
 
             itr_time = time() - itr_start_time
             if global_step % cfg.logging.log_every == 0:
@@ -623,11 +566,7 @@ def run(
                     "train/reg_loss_unweight": regl_unweight.item(),
                     "train/pred_loss": pl.item(),
                     "train/probe_loss": xy_loss.item(),
-                    **(
-                        {"train/visual_decoder_loss": vd_loss_total.item()}
-                        if visual_decoder is not None
-                        else {}
-                    ),
+                    **({"train/visual_decoder_loss": vd_loss_total.item()} if visual_decoder is not None else {}),
                     "global_step": global_step,
                     "epoch": epoch,
                     "itr_time": itr_time,
@@ -657,9 +596,7 @@ def run(
                 and (global_step + 1) % cfg.meta.eval_every_itr == 0
                 and global_step > 0
             ):
-                eval_loader = (
-                    eval_val_loader if eval_val_loader is not None else val_loader
-                )
+                eval_loader = eval_val_loader if eval_val_loader is not None else val_loader
                 eval_results = launch_plan_eval(
                     jepa_module,
                     env_creator,
@@ -671,23 +608,15 @@ def run(
                     loader=eval_loader,
                     prober=xy_prober,
                     plan_cfg=plan_cfg,
-                    visual_decoders=(
-                        {1: visual_decoder} if visual_decoder is not None else None
-                    ),
+                    visual_decoders=({1: visual_decoder} if visual_decoder is not None else None),
                 )
 
                 if cfg.logging.get("log_wandb"):
                     wandb.log(eval_results, step=global_step)
 
             # Light eval (only if eval is enabled, rank 0 only)
-            if (
-                is_main
-                and (global_step + 1) % cfg.meta.light_eval_freq == 0
-                and global_step > 0
-            ):
-                eval_loader = (
-                    eval_val_loader if eval_val_loader is not None else val_loader
-                )
+            if is_main and (global_step + 1) % cfg.meta.light_eval_freq == 0 and global_step > 0:
+                eval_loader = eval_val_loader if eval_val_loader is not None else val_loader
                 eval_results = launch_unroll_eval(
                     jepa_module,
                     env_creator,
@@ -698,9 +627,7 @@ def run(
                     loader=eval_loader,
                     probers=xy_prober,
                     cfg=cfg,
-                    visual_decoders=(
-                        {1: visual_decoder} if visual_decoder is not None else None
-                    ),
+                    visual_decoders=({1: visual_decoder} if visual_decoder is not None else None),
                     lpips_fn=lpips_fn,
                 )
 
@@ -736,9 +663,7 @@ def run(
                 "probe_scheduler_state_dict": probe_scheduler.state_dict(),
             }
             if visual_decoder is not None:
-                ckpt_extra["visual_decoder_state_dict"] = unwrap_model(
-                    visual_decoder
-                ).state_dict()
+                ckpt_extra["visual_decoder_state_dict"] = unwrap_model(visual_decoder).state_dict()
 
             save_training_state(
                 folder,

@@ -1,7 +1,5 @@
 """Shared utilities for neural network initialization and common patterns."""
 
-from __future__ import annotations
-
 import math
 from typing import Optional
 
@@ -22,9 +20,7 @@ def init_module_weights(m, std: float = 0.02):
         m: PyTorch module to initialize
         std: Standard deviation for truncated normal initialization (default: 0.02)
     """
-    if isinstance(
-        m, (nn.Conv2d, nn.Conv3d, nn.ConvTranspose2d, nn.ConvTranspose3d, nn.Linear)
-    ):
+    if isinstance(m, (nn.Conv2d, nn.Conv3d, nn.ConvTranspose2d, nn.ConvTranspose3d, nn.Linear)):
         nn.init.trunc_normal_(m.weight, std=std)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)

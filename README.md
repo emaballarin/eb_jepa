@@ -63,10 +63,10 @@ Predict next image representation in a sequence.
 
 JEPA for world modeling + planning in Two Rooms, PushT, and PointMaze. Includes reproduction of [LE-WM](https://arxiv.org/abs/2603.19312) ([code](https://github.com/lucas-maes/le-wm)).
 
-| Planning Episode | Task Definition |
-|------------------|-----------------|
+| Planning Episode                                                                                                         | Task Definition                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | <img src="examples/ac_video_jepa/assets/top_randw_agent_steps_succ.gif" alt="Successful planning episode" width="155" /> | <img src="examples/ac_video_jepa/assets/top_randw_state.png" alt="Episode task definition" width="300" /> |
-| *Successful planning episode* | *From init to goal state* |
+| _Successful planning episode_                                                                                            | _From init to goal state_                                                                                 |
 
 ### [Hierarchical AC Video JEPA](examples/h_ac_video_jepa/README.md)
 
@@ -76,7 +76,7 @@ Multi-level hierarchical JEPA with top-down planning. Extends AC Video JEPA with
   <img src="examples/h_ac_video_jepa/assets/h_planning_schema_statecost.png" alt="Hierarchical planning schema" width="600">
 </p>
 
-__Top-down hierarchical planning (2-level example, $L = 2$).__
+**Top-down hierarchical planning (2-level example, $L = 2$).**
 
 ---
 
@@ -93,6 +93,7 @@ python main.py
 # Option 2: Run directly with uv
 uv run python main.py
 ```
+
 If you need conda-specific packages, you can use **Conda + uv**
 
 ```bash
@@ -139,6 +140,7 @@ python -m examples.h_ac_video_jepa.main --fname examples/h_ac_video_jepa/cfgs/tr
 # AC Video JEPA on DROID (requires EBJEPA_DATA set)
 python -m examples.ac_video_jepa.main --fname examples/ac_video_jepa/cfgs/train/droid/vits16_patch384_lewm.yaml
 ```
+
 > Our default configs are tuned for H100 GPUs. With older GPUs (e.g., A100, V100), you may need to reduce batch size to fit in memory.
 
 ### 📂 Folder Structure
@@ -161,6 +163,7 @@ checkpoints/
 ```
 
 `{exp_name}` encodes key hyperparameters to avoid folder collisions, e.g.:
+
 - **image_jepa**: `resnet_vicreg_proj_bs256_ep300_ph2048_po2048_std1.0_cov80.0`
 - **video_jepa**: `resnet_bs64_lr0.001_std10.0_cov100.0`
 - **ac_video_jepa**: `impala_cov8_std16_simt12_idm1`
@@ -168,15 +171,15 @@ checkpoints/
 <details>
 <summary><span style="font-size: 1.17em; font-weight: bold;">🖥️ SLURM Launcher (optional)</span></summary>
 
-| Command | Description |
-|---------|-------------|
-| `--example {name}` | Choose: `image_jepa`, `video_jepa`, `ac_video_jepa`, `h_ac_video_jepa` |
-| `--fname {path}` | Run the sweep specified in the config at `{path}` |
-| `--single` | Launch single job (dev mode) |
-| `--sweep {name}` | Custom sweep name |
-| `--array-parallelism {N}` | Limits the maximum number of concurrent jobs to `N` |
-| `--full-sweep` | Full hyperparameter sweep from config |
-| `--use-wandb-sweep` | Enable wandb sweep UI |
+| Command                   | Description                                                            |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `--example {name}`        | Choose: `image_jepa`, `video_jepa`, `ac_video_jepa`, `h_ac_video_jepa` |
+| `--fname {path}`          | Run the sweep specified in the config at `{path}`                      |
+| `--single`                | Launch single job (dev mode)                                           |
+| `--sweep {name}`          | Custom sweep name                                                      |
+| `--array-parallelism {N}` | Limits the maximum number of concurrent jobs to `N`                    |
+| `--full-sweep`            | Full hyperparameter sweep from config                                  |
+| `--use-wandb-sweep`       | Enable wandb sweep UI                                                  |
 
 ```bash
 # 3 seeds with wandb averaging (recommended)
@@ -202,10 +205,10 @@ Replace `image_jepa` with `ac_video_jepa`, `h_ac_video_jepa`, or `video_jepa` fo
 ```yaml
 # Example: examples/image_jepa/cfgs/default.yaml
 sweep:
-  param_grid:
-    loss.cov_coeff: [0.1, 1.0, 10.0, 100.0]
-    loss.std_coeff: [1.0, 10.0]
-    meta.seed: [1, 1000, 10000]
+    param_grid:
+        loss.cov_coeff: [0.1, 1.0, 10.0, 100.0]
+        loss.std_coeff: [1.0, 10.0]
+        meta.seed: [1, 1000, 10000]
 ```
 
 ### Wandb Seed Averaging
@@ -216,18 +219,20 @@ Runs with the same hyperparameters but different seeds share the same wandb run 
 2. Click **"Group by"** → select **"Name"**
    → Groups runs with identical hyperparameters (different seeds) together
 
-To filter runs from a specific sweep:
-3. Click **"Filter"** → **"Group"** → select your sweep name
+To filter runs from a specific sweep: 3. Click **"Filter"** → **"Group"** → select your sweep name
 
 For detailed wandb sweep analysis (parallel coordinates, hyperparameter importance):
+
 1. Use `--use-wandb-sweep` flag when launching
 2. Go to wandb web UI → left pane → **"Sweeps"** → click your sweep name
 
 **SLURM Configuration:** Copy the template and edit for your cluster:
+
 ```bash
 cp examples/slurm.yaml.example local/slurm.yaml
 # Edit local/slurm.yaml with your cluster's partition, account, etc.
 ```
+
 See [`examples/slurm.yaml.example`](examples/slurm.yaml.example) for all available options.
 
 </details>
@@ -238,16 +243,16 @@ See [`examples/slurm.yaml.example`](examples/slurm.yaml.example) for all availab
 
 The codebase supports the following datasets:
 
-| Dataset | Domain | Observations | Actions | Example |
-|---------|--------|-------------|---------|---------|
-| **CIFAR-10** | Natural images | 32×32 RGB | N/A | `image_jepa` |
-| **Moving MNIST** | Synthetic video | 64×64 grayscale | N/A | `video_jepa` |
-| **Two Rooms** | 2D navigation | 65×65 RGB | 2D velocity | `ac_video_jepa`, `h_ac_video_jepa` |
-| **DROID** | Real robot manipulation | Multi-view RGB video | 7-DoF delta poses | `ac_video_jepa`, `h_ac_video_jepa` |
-| **PushT** | 2D pushing | 96×96 RGB | 2D position | `ac_video_jepa` |
-| **PointMaze** | 2D maze navigation | 64×64 RGB | 2D velocity | `ac_video_jepa` |
-| **Franka Custom** | Real robot manipulation | Multi-view RGB | 7-DoF delta poses | `ac_video_jepa`, `h_ac_video_jepa` |
-| **RoboCasa** | Kitchen manipulation | Multi-view RGB | 7-DoF delta poses | `ac_video_jepa` |
+| Dataset           | Domain                  | Observations         | Actions           | Example                            |
+| ----------------- | ----------------------- | -------------------- | ----------------- | ---------------------------------- |
+| **CIFAR-10**      | Natural images          | 32×32 RGB            | N/A               | `image_jepa`                       |
+| **Moving MNIST**  | Synthetic video         | 64×64 grayscale      | N/A               | `video_jepa`                       |
+| **Two Rooms**     | 2D navigation           | 65×65 RGB            | 2D velocity       | `ac_video_jepa`, `h_ac_video_jepa` |
+| **DROID**         | Real robot manipulation | Multi-view RGB video | 7-DoF delta poses | `ac_video_jepa`, `h_ac_video_jepa` |
+| **PushT**         | 2D pushing              | 96×96 RGB            | 2D position       | `ac_video_jepa`                    |
+| **PointMaze**     | 2D maze navigation      | 64×64 RGB            | 2D velocity       | `ac_video_jepa`                    |
+| **Franka Custom** | Real robot manipulation | Multi-view RGB       | 7-DoF delta poses | `ac_video_jepa`, `h_ac_video_jepa` |
+| **RoboCasa**      | Kitchen manipulation    | Multi-view RGB       | 7-DoF delta poses | `ac_video_jepa`                    |
 
 > **Note:** RoboCasa dataset and environment integration is partially implemented but not yet tested end-to-end.
 
@@ -264,6 +269,7 @@ python src/scripts/download_data.py --dataset pusht pointmaze franka
 Then place the downloaded directories under `$EBJEPA_DATA`.
 
 > **Franka Custom** is used for offline evaluation on real robot data (see `examples/ac_video_jepa/cfgs/eval/franka_custom.yaml` and `examples/h_ac_video_jepa/cfgs/eval/franka_custom.yaml`).
+
 </details>
 
 <details>
@@ -288,6 +294,7 @@ python src/scripts/generate_droid_paths.py \
 ```
 
 This scans the dataset directory and creates a CSV listing all valid episode paths.
+
 </details>
 
 See [`eb_jepa/data/README.md`](eb_jepa/data/README.md)
@@ -300,20 +307,20 @@ See [`eb_jepa/data/README.md`](eb_jepa/data/README.md)
 
 ### Key Files
 
-| Directory | Contents |
-|-----------|----------|
-| `eb_jepa/jepa.py` | Core JEPA classes: `JEPAbase`, `JEPA`, `JEPAProbe` |
-| `eb_jepa/h_jepa.py` | Hierarchical JEPA: `HierarchicalJEPA` |
-| `eb_jepa/builders.py` | Shared builder functions for model components |
-| `eb_jepa/models/` | `encoders.py`, `predictors.py`, `decoders.py`, `components.py`, `probes.py`, `nn.py` |
-| `eb_jepa/losses/` | `anticollapse.py` (VCReg, SIGReg), `prediction.py`, `regularizers.py` (VC+IDM) |
-| `eb_jepa/planning/` | `agent.py` (GCAgent), `optimizers.py` (MPPI, CEM, GD, Adam), `objectives.py`, `evaluation.py` |
-| `eb_jepa/data/` | Dataset implementations, `traj_dset.py`, `utils.py`, transforms |
-| `eb_jepa/envs/` | Environment wrappers for Two Rooms, PushT, PointMaze, DROID |
-| `eb_jepa/utils/` | `config.py`, `checkpoint.py`, `distributed.py`, `logging.py`, `training.py`, `schedulers.py` |
-| `eb_jepa/vis/` | Visualization: `frames.py`, `plots.py` |
-| `examples/` | Self-contained examples with configs, training scripts, and READMEs |
-| `scripts/` | Analysis and visualization scripts (see below) |
+| Directory             | Contents                                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `eb_jepa/jepa.py`     | Core JEPA classes: `JEPAbase`, `JEPA`, `JEPAProbe`                                            |
+| `eb_jepa/h_jepa.py`   | Hierarchical JEPA: `HierarchicalJEPA`                                                         |
+| `eb_jepa/builders.py` | Shared builder functions for model components                                                 |
+| `eb_jepa/models/`     | `encoders.py`, `predictors.py`, `decoders.py`, `components.py`, `probes.py`, `nn.py`          |
+| `eb_jepa/losses/`     | `anticollapse.py` (VCReg, SIGReg), `prediction.py`, `regularizers.py` (VC+IDM)                |
+| `eb_jepa/planning/`   | `agent.py` (GCAgent), `optimizers.py` (MPPI, CEM, GD, Adam), `objectives.py`, `evaluation.py` |
+| `eb_jepa/data/`       | Dataset implementations, `traj_dset.py`, `utils.py`, transforms                               |
+| `eb_jepa/envs/`       | Environment wrappers for Two Rooms, PushT, PointMaze, DROID                                   |
+| `eb_jepa/utils/`      | `config.py`, `checkpoint.py`, `distributed.py`, `logging.py`, `training.py`, `schedulers.py`  |
+| `eb_jepa/vis/`        | Visualization: `frames.py`, `plots.py`                                                        |
+| `examples/`           | Self-contained examples with configs, training scripts, and READMEs                           |
+| `scripts/`            | Analysis and visualization scripts (see below)                                                |
 
 ---
 
@@ -321,13 +328,14 @@ See [`eb_jepa/data/README.md`](eb_jepa/data/README.md)
 
 The `scripts/` directory contains standalone analysis and visualization tools:
 
-| Script | Description |
-|--------|-------------|
-| `scripts/analyze_training_sweep.py` | Analyze training sweep results: hyperparameter importance, correlations, Pareto fronts |
-| `scripts/analyze_planning_sweep.py` | Analyze planning evaluation sweeps: compare planning configs across checkpoints |
-| `scripts/visualize_planning_cost_heatmap.py` | CLI wrapper for planning cost heatmaps (logic in `eb_jepa.vis.heatmaps`) |
+| Script                                       | Description                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `scripts/analyze_training_sweep.py`          | Analyze training sweep results: hyperparameter importance, correlations, Pareto fronts |
+| `scripts/analyze_planning_sweep.py`          | Analyze planning evaluation sweeps: compare planning configs across checkpoints        |
+| `scripts/visualize_planning_cost_heatmap.py` | CLI wrapper for planning cost heatmaps (logic in `eb_jepa.vis.heatmaps`)               |
 
 Run any script with `--help` for usage details:
+
 ```bash
 python -m scripts.analyze_training_sweep --help
 ```

@@ -1,18 +1,15 @@
-from __future__ import annotations
-
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eb_jepa.models.nn import (
-    AttentivePooler,
-    TemporalBatchMixin,
-    build_mlp,
-    init_module_weights,
-    spatial_layer_norm,
-)
+from eb_jepa.models.nn import AttentivePooler
+from eb_jepa.models.nn import build_mlp
+from eb_jepa.models.nn import init_module_weights
+from eb_jepa.models.nn import spatial_layer_norm
+from eb_jepa.models.nn import TemporalBatchMixin
 
 
 class CostModule(nn.Module):
@@ -33,13 +30,9 @@ class conv3d2(nn.Sequential):
 
     def __init__(self, in_d, h_d, out_d, tk, ts, sk, ss, pad):
         super(conv3d2, self).__init__(
-            nn.Conv3d(
-                in_d, h_d, kernel_size=(tk, sk, sk), stride=(1, 1, 1), padding=pad
-            ),
+            nn.Conv3d(in_d, h_d, kernel_size=(tk, sk, sk), stride=(1, 1, 1), padding=pad),
             nn.ReLU(),
-            nn.Conv3d(
-                h_d, out_d, kernel_size=(tk, sk, sk), stride=(ts, ss, ss), padding=pad
-            ),
+            nn.Conv3d(h_d, out_d, kernel_size=(tk, sk, sk), stride=(ts, ss, ss), padding=pad),
         )
         self.apply(init_module_weights)
         self.input_dim = in_d
@@ -72,17 +65,13 @@ class ResidualBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
 
-        self.conv2 = nn.Conv2d(
-            out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False
-        )
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(
-                    in_channels, out_channels, kernel_size=1, stride=stride, bias=False
-                ),
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(out_channels),
             )
 
@@ -103,9 +92,7 @@ class ResNet5(TemporalBatchMixin, nn.Module):
     def __init__(self, in_d, h_d, out_d, s1=1, s2=1, s3=1, avg_pool=False):
         super().__init__()
         self.avg_pool = avg_pool
-        self.conv1 = nn.Conv2d(
-            in_d, h_d, kernel_size=3, stride=1, padding=1, bias=False
-        )
+        self.conv1 = nn.Conv2d(in_d, h_d, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(h_d)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = ResidualBlock(h_d, h_d, stride=s1)
@@ -159,9 +146,7 @@ class ResUNet(TemporalBatchMixin, nn.Module):
         super().__init__()
         self.is_rnn = is_rnn
         # Stem
-        self.conv1 = nn.Conv2d(
-            in_d, h_d, kernel_size=3, stride=1, padding=1, bias=False
-        )
+        self.conv1 = nn.Conv2d(in_d, h_d, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(h_d)
         self.relu = nn.ReLU(inplace=True)
 
@@ -188,9 +173,7 @@ class ResUNet(TemporalBatchMixin, nn.Module):
     def _match_size(x, ref):
         # Guards against odd input sizes by resizing the upsample to the skip spatial dims
         if x.shape[-2:] != ref.shape[-2:]:
-            x = F.interpolate(
-                x, size=ref.shape[-2:], mode="bilinear", align_corners=False
-            )
+            x = F.interpolate(x, size=ref.shape[-2:], mode="bilinear", align_corners=False)
         return x
 
     def _forward(self, x):
@@ -383,9 +366,7 @@ class AttentiveInverseDynamicsModel(nn.Module):
         )
         self.action_head.apply(init_module_weights)
 
-    def forward(
-        self, state_t: torch.Tensor, state_t_plus_1: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, state_t: torch.Tensor, state_t_plus_1: torch.Tensor) -> torch.Tensor:
         """Predict action from consecutive spatial state tokens.
 
         Args:
@@ -475,9 +456,7 @@ class MLPEncoder(nn.Module):
         B, D, T, H, W = x.shape
         x_flat = x.permute(0, 2, 3, 4, 1).reshape(B * T * H * W, D)  # [B*T*H*W, D]
         x_out = self.net(x_flat)  # [B*T*H*W, D_out]
-        x_out = x_out.reshape(B, T, H, W, self.output_dim).permute(
-            0, 4, 1, 2, 3
-        )  # [B, D_out, T, H, W]
+        x_out = x_out.reshape(B, T, H, W, self.output_dim).permute(0, 4, 1, 2, 3)  # [B, D_out, T, H, W]
         return x_out
 
 
@@ -517,19 +496,13 @@ class ConvEncoder(nn.Module):
         prev_dim = input_dim
         padding = kernel_size // 2
         for hidden_dim in hidden_dims:
-            layers.append(
-                nn.Conv2d(
-                    prev_dim, hidden_dim, kernel_size, stride=stride, padding=padding
-                )
-            )
+            layers.append(nn.Conv2d(prev_dim, hidden_dim, kernel_size, stride=stride, padding=padding))
             layers.append(nn.GroupNorm(min(32, hidden_dim), hidden_dim))
             layers.append(nn.ReLU(inplace=True))
             prev_dim = hidden_dim
             stride = 1  # only first layer downsamples by default
 
-        layers.append(
-            nn.Conv2d(prev_dim, output_dim, kernel_size=1, stride=1, padding=0)
-        )
+        layers.append(nn.Conv2d(prev_dim, output_dim, kernel_size=1, stride=1, padding=0))
         self.conv_layers = nn.Sequential(*layers)
         self.final_ln = nn.LayerNorm(output_dim) if final_ln else nn.Identity()
         self.apply(init_module_weights)
@@ -548,9 +521,7 @@ class ConvEncoder(nn.Module):
         # LayerNorm over channel dim: reshape to [B*T*H'*W', D_out]
         x = x.permute(0, 2, 3, 1).reshape(-1, D_out)  # [B*T*H'*W', D_out]
         x = self.final_ln(x)
-        x = x.reshape(B, T, H_out, W_out, D_out).permute(
-            0, 4, 1, 2, 3
-        )  # [B, D_out, T, H', W']
+        x = x.reshape(B, T, H_out, W_out, D_out).permute(0, 4, 1, 2, 3)  # [B, D_out, T, H', W']
         return x
 
 
@@ -571,12 +542,8 @@ class ConvGRUCell(nn.Module):
         self.hidden_dim = hidden_dim
         padding = kernel_size // 2
 
-        self.gate_conv = nn.Conv2d(
-            hidden_dim + input_dim, 2 * hidden_dim, kernel_size, padding=padding
-        )
-        self.candidate_conv = nn.Conv2d(
-            hidden_dim + input_dim, hidden_dim, kernel_size, padding=padding
-        )
+        self.gate_conv = nn.Conv2d(hidden_dim + input_dim, 2 * hidden_dim, kernel_size, padding=padding)
+        self.candidate_conv = nn.Conv2d(hidden_dim + input_dim, hidden_dim, kernel_size, padding=padding)
 
     def forward(self, x: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
         """
@@ -590,9 +557,7 @@ class ConvGRUCell(nn.Module):
         gates = torch.sigmoid(self.gate_conv(combined))  # [B, 2*hidden_dim, H, W]
         r, z = gates.chunk(2, dim=1)  # reset, update: each [B, hidden_dim, H, W]
 
-        candidate_input = torch.cat(
-            [r * h, x], dim=1
-        )  # [B, hidden_dim+input_dim, H, W]
+        candidate_input = torch.cat([r * h, x], dim=1)  # [B, hidden_dim+input_dim, H, W]
         n = torch.tanh(self.candidate_conv(candidate_input))  # [B, hidden_dim, H, W]
         h_new = (1 - z) * n + z * h  # [B, hidden_dim, H, W]
         return h_new
@@ -692,11 +657,7 @@ class MiniUNet(nn.Module):
         )
         self.head = nn.Conv2d(bc, out_channels, 1)
 
-        self.skip_proj = (
-            nn.Conv2d(in_channels, out_channels, 1)
-            if in_channels != out_channels
-            else nn.Identity()
-        )
+        self.skip_proj = nn.Conv2d(in_channels, out_channels, 1) if in_channels != out_channels else nn.Identity()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Args:
@@ -741,9 +702,7 @@ class MiniUNet(nn.Module):
 # ---------------------------------------------------------------------------
 
 
-def _ct_modulate(
-    x: torch.Tensor, shift: torch.Tensor, scale: torch.Tensor
-) -> torch.Tensor:
+def _ct_modulate(x: torch.Tensor, shift: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     """AdaLN-Zero modulation: x * (1 + scale) + shift."""
     return x * (1 + scale) + shift
 
@@ -751,9 +710,7 @@ def _ct_modulate(
 class _CTFeedForward(nn.Module):
     """Feed-forward block used inside CausalTransformer."""
 
-    def __init__(
-        self, dim: int, hidden_dim: int, dropout: float = 0.0, prenorm: bool = False
-    ):
+    def __init__(self, dim: int, hidden_dim: int, dropout: float = 0.0, prenorm: bool = False):
         super().__init__()
         layers = []
         if prenorm:
@@ -789,15 +746,9 @@ class _CTAttention(nn.Module):
         self.dropout = dropout
         self.norm = nn.LayerNorm(dim) if prenorm else None
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
-        self.to_out = (
-            nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout))
-            if project_out
-            else nn.Identity()
-        )
+        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
 
-    def forward(
-        self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Args:
             x: [B, N, D] where N is sequence length.
@@ -814,16 +765,10 @@ class _CTAttention(nn.Module):
             t.view(t.shape[0], t.shape[1], self.heads, -1).transpose(1, 2) for t in qkv
         )  # each [B, heads, N, dim_head]
         if attn_mask is not None:
-            out = F.scaled_dot_product_attention(
-                q, k, v, dropout_p=drop, attn_mask=attn_mask
-            )
+            out = F.scaled_dot_product_attention(q, k, v, dropout_p=drop, attn_mask=attn_mask)
         else:
-            out = F.scaled_dot_product_attention(
-                q, k, v, dropout_p=drop, is_causal=True
-            )
-        out = out.transpose(1, 2).reshape(
-            x.shape[0], x.shape[1], -1
-        )  # [B, N, inner_dim]
+            out = F.scaled_dot_product_attention(q, k, v, dropout_p=drop, is_causal=True)
+        out = out.transpose(1, 2).reshape(x.shape[0], x.shape[1], -1)  # [B, N, inner_dim]
         return self.to_out(out)
 
 
@@ -860,19 +805,13 @@ class _CTConditionalBlock(nn.Module):
     ):
         super().__init__()
         self.action_cond_mode = action_cond_mode
-        self.attn = _CTAttention(
-            dim, heads=heads, dim_head=dim_head, dropout=dropout, prenorm=double_norm
-        )
-        self.mlp = _CTFeedForward(
-            dim, int(mlp_ratio * dim), dropout=dropout, prenorm=double_norm
-        )
+        self.attn = _CTAttention(dim, heads=heads, dim_head=dim_head, dropout=dropout, prenorm=double_norm)
+        self.mlp = _CTFeedForward(dim, int(mlp_ratio * dim), dropout=dropout, prenorm=double_norm)
 
         if action_cond_mode == "adaln":
             self.norm1 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
             self.norm2 = nn.LayerNorm(dim, elementwise_affine=False, eps=1e-6)
-            self.adaLN_modulation = nn.Sequential(
-                nn.SiLU(), nn.Linear(dim, 6 * dim, bias=True)
-            )
+            self.adaLN_modulation = nn.Sequential(nn.SiLU(), nn.Linear(dim, 6 * dim, bias=True))
             if adaln_init_scale == 0.0:
                 nn.init.constant_(self.adaLN_modulation[-1].weight, 0)
                 nn.init.constant_(self.adaLN_modulation[-1].bias, 0)
@@ -896,15 +835,9 @@ class _CTConditionalBlock(nn.Module):
         attn_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         if self.action_cond_mode == "adaln":
-            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
-                self.adaLN_modulation(c).chunk(6, dim=-1)
-            )
-            x = x + gate_msa * self.attn(
-                _ct_modulate(self.norm1(x), shift_msa, scale_msa), attn_mask=attn_mask
-            )
-            x = x + gate_mlp * self.mlp(
-                _ct_modulate(self.norm2(x), shift_mlp, scale_mlp)
-            )
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=-1)
+            x = x + gate_msa * self.attn(_ct_modulate(self.norm1(x), shift_msa, scale_msa), attn_mask=attn_mask)
+            x = x + gate_mlp * self.mlp(_ct_modulate(self.norm2(x), shift_mlp, scale_mlp))
         elif self.action_cond_mode == "additive":
             x = x + self.cond_proj(c)
             x = x + self.attn(self.norm1(x), attn_mask=attn_mask)
@@ -934,38 +867,24 @@ class _CTTransformer(nn.Module):
     ):
         super().__init__()
         self.norm = nn.LayerNorm(hidden_dim)
-        self.input_proj = (
-            nn.Linear(input_dim, hidden_dim)
-            if input_dim != hidden_dim
-            else nn.Identity()
-        )
+        self.input_proj = nn.Linear(input_dim, hidden_dim) if input_dim != hidden_dim else nn.Identity()
         self.action_cond_mode = action_cond_mode
         if action_cond_mode != "none":
-            self.cond_proj = (
-                nn.Linear(input_dim, hidden_dim)
-                if input_dim != hidden_dim
-                else nn.Identity()
+            self.cond_proj = nn.Linear(input_dim, hidden_dim) if input_dim != hidden_dim else nn.Identity()
+        self.output_proj = nn.Linear(hidden_dim, output_dim) if hidden_dim != output_dim else nn.Identity()
+        self.layers = nn.ModuleList([
+            _CTConditionalBlock(
+                hidden_dim,
+                heads,
+                dim_head,
+                mlp_ratio,
+                dropout,
+                adaln_init_scale=adaln_init_scale,
+                action_cond_mode=action_cond_mode,
+                double_norm=double_norm,
             )
-        self.output_proj = (
-            nn.Linear(hidden_dim, output_dim)
-            if hidden_dim != output_dim
-            else nn.Identity()
-        )
-        self.layers = nn.ModuleList(
-            [
-                _CTConditionalBlock(
-                    hidden_dim,
-                    heads,
-                    dim_head,
-                    mlp_ratio,
-                    dropout,
-                    adaln_init_scale=adaln_init_scale,
-                    action_cond_mode=action_cond_mode,
-                    double_norm=double_norm,
-                )
-                for _ in range(depth)
-            ]
-        )
+            for _ in range(depth)
+        ])
 
     def forward(
         self,
@@ -985,9 +904,7 @@ class _CTTransformer(nn.Module):
         return x
 
 
-def build_frame_causal_mask(
-    T: int, H: int, W: int, context_window: Optional[int] = None
-) -> torch.Tensor:
+def build_frame_causal_mask(T: int, H: int, W: int, context_window: Optional[int] = None) -> torch.Tensor:
     """Build a frame-causal (blockwise lower-triangular) attention mask.
 
     Each frame's patches can attend to all patches from the same frame and

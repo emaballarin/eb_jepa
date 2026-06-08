@@ -3,23 +3,24 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
 """DROID video dataset for robot manipulation."""
 
 import json
 import os
+from collections.abc import Sequence
 from logging import getLogger
 from math import ceil
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any
+from typing import Optional
 
 import decord
 import h5py
 import numpy as np
 import pandas as pd
-import torch
 import torch.utils.data
-from decord import VideoReader, cpu
+from decord import cpu
+from decord import VideoReader
 from einops import repeat
 from scipy.spatial.transform import Rotation
 from tqdm import tqdm
@@ -48,18 +49,14 @@ def poses_to_diffs(poses):
     """
     xyz = poses[:, :3]  # shape [T, 3]
     thetas = poses[:, 3:6]  # euler angles, shape [T, 3]
-    matrices = [
-        Rotation.from_euler("xyz", theta, degrees=False).as_matrix() for theta in thetas
-    ]
+    matrices = [Rotation.from_euler("xyz", theta, degrees=False).as_matrix() for theta in thetas]
 
     # Compute delta xyz
     xyz_diff = xyz[1:] - xyz[:-1]
 
     # Compute delta rotation
     angle_diff = [matrices[t + 1] @ matrices[t].T for t in range(len(matrices) - 1)]
-    angle_diff = [
-        Rotation.from_matrix(mat).as_euler("xyz", degrees=False) for mat in angle_diff
-    ]
+    angle_diff = [Rotation.from_matrix(mat).as_euler("xyz", degrees=False) for mat in angle_diff]
     angle_diff = np.stack([d for d in angle_diff], axis=0)
 
     # Compute delta gripper
@@ -90,17 +87,10 @@ def compute_new_pose(pose, action):
     # Compute delta theta
     thetas = pose[:, 3:6]
     delta_thetas = action[:, 3:6]
-    matrices = [
-        Rotation.from_euler("xyz", theta, degrees=False).as_matrix() for theta in thetas
-    ]
-    delta_matrices = [
-        Rotation.from_euler("xyz", theta, degrees=False).as_matrix()
-        for theta in delta_thetas
-    ]
+    matrices = [Rotation.from_euler("xyz", theta, degrees=False).as_matrix() for theta in thetas]
+    delta_matrices = [Rotation.from_euler("xyz", theta, degrees=False).as_matrix() for theta in delta_thetas]
     angle_diff = [delta_matrices[t] @ matrices[t] for t in range(len(matrices))]
-    angle_diff = [
-        Rotation.from_matrix(mat).as_euler("xyz", degrees=False) for mat in angle_diff
-    ]
+    angle_diff = [Rotation.from_matrix(mat).as_euler("xyz", degrees=False) for mat in angle_diff]
     new_angle = np.stack([d for d in angle_diff], axis=0)  # [B, 7]
 
     # Compute delta gripper
@@ -126,9 +116,7 @@ def get_json(directory):
             except json.JSONDecodeError:
                 logger.error(f"Error decoding JSON in file: {filename}")
             except Exception as e:
-                logger.error(
-                    f"An unexpected error occurred while processing {filename}: {e}"
-                )
+                logger.error(f"An unexpected error occurred while processing {filename}: {e}")
     return None
 
 
@@ -199,9 +187,7 @@ class DROIDVideoDataset(TrajDataset):
         self.rng = np.random.RandomState(seed)
 
         if VideoReader is None:
-            raise ImportError(
-                'Unable to import "decord" which is required to read videos.'
-            )
+            raise ImportError('Unable to import "decord" which is required to read videos.')
 
         # Camera views
         self.camera_views = camera_views
@@ -215,9 +201,7 @@ class DROIDVideoDataset(TrajDataset):
             debug = False
         else:
             self.h5_name = "trajectory.h5"
-            self.samples = list(
-                pd.read_csv(data_path, header=None, delimiter=" ").values[:, 0]
-            )
+            self.samples = list(pd.read_csv(data_path, header=None, delimiter=" ").values[:, 0])
             num_samples_stored = 50 if normalize_action else 1
             debug = False
 
@@ -226,13 +210,9 @@ class DROIDVideoDataset(TrajDataset):
             original_len = len(self.samples)
             num_samples = max(1, int(original_len * droid_fraction))
             self.samples = self.samples[:num_samples]
-            logger.info(
-                f"Slicing dataset from {original_len} to {num_samples} samples ({droid_fraction*100:.1f}%)"
-            )
+            logger.info(f"Slicing dataset from {original_len} to {num_samples} samples ({droid_fraction * 100:.1f}%)")
         else:
-            logger.info(
-                f"Not slicing DROID dataset, using {len(self.samples)} samples, 100% of video paths"
-            )
+            logger.info(f"Not slicing DROID dataset, using {len(self.samples)} samples, 100% of video paths")
 
         # Compute normalization statistics
         states = []
@@ -260,15 +240,9 @@ class DROIDVideoDataset(TrajDataset):
         self.proprio_dim = self.proprios.shape[-1]
 
         if normalize_action:
-            self.action_mean, self.action_std = TrajDataset.compute_mean_std(
-                self.actions, self.seq_lengths
-            )
-            self.state_mean, self.state_std = TrajDataset.compute_mean_std(
-                self.states, self.seq_lengths
-            )
-            self.proprio_mean, self.proprio_std = TrajDataset.compute_mean_std(
-                self.proprios, self.seq_lengths
-            )
+            self.action_mean, self.action_std = TrajDataset.compute_mean_std(self.actions, self.seq_lengths)
+            self.state_mean, self.state_std = TrajDataset.compute_mean_std(self.states, self.seq_lengths)
+            self.proprio_mean, self.proprio_std = TrajDataset.compute_mean_std(self.proprios, self.seq_lengths)
         else:
             self.action_mean = torch.zeros(self.action_dim)
             self.action_std = torch.ones(self.action_dim)
@@ -302,33 +276,24 @@ class DROIDVideoDataset(TrajDataset):
         for attempt in range(max_retries):
             try:
                 if self.mpk_dset:
-                    buffer, actions, states, extrinsics, indices = self.loadvideo_hf(
-                        path
-                    )
+                    buffer, actions, states, extrinsics, indices = self.loadvideo_hf(path)
                 else:
-                    buffer, actions, states, extrinsics, indices = (
-                        self.loadvideo_decord(path)
-                    )
+                    buffer, actions, states, extrinsics, indices = self.loadvideo_decord(path)
                 break
             except Exception as e:
                 if debug or attempt == max_retries - 1:
                     raise RuntimeError(
-                        f"Failed to load video after {max_retries} attempts. "
-                        f"Last path: {path}, error: {e}"
+                        f"Failed to load video after {max_retries} attempts. Last path: {path}, error: {e}"
                     ) from e
                 idx = self.rng.randint(0, self.__len__())
                 path = self.samples[idx]
 
         if self.droid_to_rcasa_action_format > 1:
-            actions = self.repeat_divide_action(
-                actions, act_repeat=self.droid_to_rcasa_action_format
-            )
+            actions = self.repeat_divide_action(actions, act_repeat=self.droid_to_rcasa_action_format)
 
         # Pad actions with dummy last action so that it has the same length as obs
         if len(actions) < len(states):
-            actions = np.concatenate(
-                [actions, np.zeros((1, actions.shape[-1]))], axis=0
-            )
+            actions = np.concatenate([actions, np.zeros((1, actions.shape[-1]))], axis=0)
 
         actions = torch.tensor(actions, dtype=torch.float32)
         states = torch.tensor(states, dtype=torch.float32)
@@ -345,9 +310,7 @@ class DROIDVideoDataset(TrajDataset):
         # buffer: [T, C, H, W]
         return obs, actions, states, torch.tensor(0.0), None
 
-    def repeat_divide_action(
-        self, action: np.ndarray, act_repeat: int = 5
-    ) -> np.ndarray:
+    def repeat_divide_action(self, action: np.ndarray, act_repeat: int = 5) -> np.ndarray:
         """
         Action repeat and divide. Used when a model is used to concatenated "small" actions
         and we want to feed it DROID actions that are big and 7-dimensional.
@@ -421,12 +384,8 @@ class DROIDVideoDataset(TrajDataset):
         camera_view = self.camera_views[self.rng.randint(0, len(self.camera_views))]
         states = np.concatenate(
             [
-                np.array(
-                    trajectory["episode_data"]["observation"]["cartesian_position"]
-                ),
-                np.array(trajectory["episode_data"]["observation"]["gripper_position"])[
-                    :, None
-                ],
+                np.array(trajectory["episode_data"]["observation"]["cartesian_position"]),
+                np.array(trajectory["episode_data"]["observation"]["gripper_position"])[:, None],
             ],
             axis=1,
         )  # [T, 7]
@@ -449,13 +408,9 @@ class DROIDVideoDataset(TrajDataset):
         states = states[indices, :][:: self.frameskip]
         actions = poses_to_diffs(states[:: self.action_skip])
 
-        buffer = trajectory["episode_data"]["observation"][camera_view][indices, :][
-            :: self.frameskip
-        ]
+        buffer = trajectory["episode_data"]["observation"][camera_view][indices, :][:: self.frameskip]
         buffer = buffer / 255.0
-        buffer = torch.tensor(buffer, dtype=torch.float32).permute(
-            0, 3, 1, 2
-        )  # T H W C -> T C H W
+        buffer = torch.tensor(buffer, dtype=torch.float32).permute(0, 3, 1, 2)  # T H W C -> T C H W
         if self.transform is not None:
             buffer = self.transform(buffer)
         return buffer, actions, states, None, indices
@@ -484,18 +439,12 @@ class DROIDVideoDataset(TrajDataset):
         camera_view = self.camera_views[self.rng.randint(0, len(self.camera_views))]
         mp4_name = metadata[camera_view].split("recordings/MP4/")[-1]
         camera_name = mp4_name.split(".")[0]
-        extrinsics = trajectory["observation"]["camera_extrinsics"][
-            f"{camera_name}_left"
-        ]
+        extrinsics = trajectory["observation"]["camera_extrinsics"][f"{camera_name}_left"]
 
         states = np.concatenate(
             [
-                np.array(
-                    trajectory["observation"]["robot_state"]["cartesian_position"]
-                ),
-                np.array(trajectory["observation"]["robot_state"]["gripper_position"])[
-                    :, None
-                ],
+                np.array(trajectory["observation"]["robot_state"]["cartesian_position"]),
+                np.array(trajectory["observation"]["robot_state"]["gripper_position"])[:, None],
             ],
             axis=1,
         )  # [T, 7]
@@ -533,9 +482,7 @@ class DROIDVideoDataset(TrajDataset):
         vr.seek(0)  # go to start of video before sampling frames
         buffer = vr.get_batch(indices).asnumpy()
         buffer = buffer / 255.0
-        buffer = torch.tensor(buffer, dtype=torch.float32).permute(
-            0, 3, 1, 2
-        )  # T H W C -> T C H W
+        buffer = torch.tensor(buffer, dtype=torch.float32).permute(0, 3, 1, 2)  # T H W C -> T C H W
 
         if self.transform is not None:
             buffer = self.transform(buffer)

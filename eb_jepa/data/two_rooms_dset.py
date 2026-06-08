@@ -17,7 +17,8 @@ Where:
 import math
 import random
 from abc import abstractmethod
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
+from dataclasses import fields
 from typing import Optional
 
 import numpy as np
@@ -135,12 +136,8 @@ def generate_wall_layouts(wall_config):
     only_wall_val = extract_min_max(wall_config.only_wall_val)
     only_door_val = extract_min_max(wall_config.only_door_val)
 
-    assert all(
-        len(a) == 0
-        for a in [exclude_wall_train, exclude_door_train, only_wall_val, only_door_val]
-    ) or all(
-        len(a) > 0
-        for a in [exclude_wall_train, exclude_door_train, only_wall_val, only_door_val]
+    assert all(len(a) == 0 for a in [exclude_wall_train, exclude_door_train, only_wall_val, only_door_val]) or all(
+        len(a) > 0 for a in [exclude_wall_train, exclude_door_train, only_wall_val, only_door_val]
     ), "Arrays must all be empty or all be non-empty"
 
     if fix_wall:
@@ -161,9 +158,7 @@ def generate_wall_layouts(wall_config):
     for wall_pos in wall_x_values:
         for door_pos in door_y_values:
             code = f"wall{wall_pos}_door{door_pos}"
-            to_exclude = (
-                wall_pos in exclude_wall_train and door_pos in exclude_door_train
-            )
+            to_exclude = wall_pos in exclude_wall_train and door_pos in exclude_door_train
             to_include_val = wall_pos in only_wall_val and door_pos in only_door_val
 
             if not to_exclude:
@@ -241,27 +236,15 @@ def check_wall_intersect(
     door_bot, door_top = hole_y - door_space, hole_y + door_space
 
     if pos2[1] - pos1[1] > 0 and pos2[1] > door_top and pos1[1] < door_top:
-        intersect = check_horizontal_wall_intersect(
-            pos1, pos2, door_top, None, door_space
-        )
-        if (
-            intersect is not None
-            and left_wall_corner <= intersect[0]
-            and intersect[0] <= right_wall_corner
-        ):
+        intersect = check_horizontal_wall_intersect(pos1, pos2, door_top, None, door_space)
+        if intersect is not None and left_wall_corner <= intersect[0] and intersect[0] <= right_wall_corner:
             noise = torch.randn(2, device=pos1.device) * 0.5
             noise[1] = noise[1].abs() * -1
             return intersect, intersect + noise
 
     if pos2[1] - pos1[1] < 0 and pos2[1] < door_bot and pos1[1] > door_bot:
-        intersect = check_horizontal_wall_intersect(
-            pos1, pos2, door_bot, None, door_space
-        )
-        if (
-            intersect is not None
-            and left_wall_corner <= intersect[0]
-            and intersect[0] <= right_wall_corner
-        ):
+        intersect = check_horizontal_wall_intersect(pos1, pos2, door_bot, None, door_space)
+        if intersect is not None and left_wall_corner <= intersect[0] and intersect[0] <= right_wall_corner:
             noise = torch.randn(2, device=pos1.device) * 0.5
             noise[1] = noise[1].abs()
             return intersect, intersect + noise
@@ -276,21 +259,13 @@ def check_wall_intersect(
     top_wall = border_wall_loc - 1
     bot_wall = img_size - border_wall_loc
 
-    vertical_intersect = check_vertical_wall_intersect(
-        pos1, pos2, left_wall, left_hole, door_space
-    )
+    vertical_intersect = check_vertical_wall_intersect(pos1, pos2, left_wall, left_hole, door_space)
     if vertical_intersect is None:
-        vertical_intersect = check_vertical_wall_intersect(
-            pos1, pos2, right_wall, right_hole, door_space
-        )
+        vertical_intersect = check_vertical_wall_intersect(pos1, pos2, right_wall, right_hole, door_space)
 
-    horizontal_intersect = check_horizontal_wall_intersect(
-        pos1, pos2, top_wall, None, door_space
-    )
+    horizontal_intersect = check_horizontal_wall_intersect(pos1, pos2, top_wall, None, door_space)
     if horizontal_intersect is None:
-        horizontal_intersect = check_horizontal_wall_intersect(
-            pos1, pos2, bot_wall, None, door_space
-        )
+        horizontal_intersect = check_horizontal_wall_intersect(pos1, pos2, bot_wall, None, door_space)
 
     if vertical_intersect is not None:
         sign = torch.sign(pos1[0] - vertical_intersect[0])
@@ -303,9 +278,7 @@ def check_wall_intersect(
         horizontal_noise[1] = horizontal_noise[1].abs() * sign
 
     if vertical_intersect is not None and horizontal_intersect is not None:
-        if torch.norm(pos1 - vertical_intersect) < torch.norm(
-            pos1 - horizontal_intersect
-        ):
+        if torch.norm(pos1 - vertical_intersect) < torch.norm(pos1 - horizontal_intersect):
             intersect, noise = vertical_intersect, vertical_noise
         else:
             intersect, noise = horizontal_intersect, horizontal_noise
@@ -317,9 +290,7 @@ def check_wall_intersect(
         return None, None
 
     intersect_w_noise = intersect + noise
-    intersect_w_noise[0] = torch.clamp(
-        intersect_w_noise[0], min=left_wall, max=right_wall
-    )
+    intersect_w_noise[0] = torch.clamp(intersect_w_noise[0], min=left_wall, max=right_wall)
     intersect_w_noise[1] = torch.clamp(intersect_w_noise[1], min=top_wall, max=bot_wall)
     if intersect_w_noise[0] <= left_wall:
         intersect_w_noise[0] = left_wall + 0.3
@@ -457,26 +428,16 @@ class DotDataset(torch.utils.data.Dataset):
         y = torch.linspace(0, sz - 1, steps=sz, device=self.device)
         xx, yy = torch.meshgrid(x, y, indexing="xy")
         c = torch.stack([xx, yy], dim=-1)
-        c = c.view(*([1] * (len(locations.shape) - 1)), *c.shape).repeat(
-            *locations.shape[:-1], *([1] * len(c.shape))
-        )
+        c = c.view(*([1] * (len(locations.shape) - 1)), *c.shape).repeat(*locations.shape[:-1], *([1] * len(c.shape)))
         locations = locations.unsqueeze(-2).unsqueeze(-2)
         img = (
-            (
-                torch.exp(
-                    -(c - locations).norm(dim=-1).pow(2)
-                    / (2 * self.config.dot_std * self.config.dot_std)
-                )
-                * 255
-            )
+            (torch.exp(-(c - locations).norm(dim=-1).pow(2) / (2 * self.config.dot_std * self.config.dot_std)) * 255)
             .clamp(0, 255)
             .to(torch.uint8)
         )
         return img
 
-    def generate_state_and_actions(
-        self, wall_locs=None, door_locs=None, size=None, n_steps: int = 17
-    ):
+    def generate_state_and_actions(self, wall_locs=None, door_locs=None, size=None, n_steps: int = 17):
         location = self.generate_state(wall_locs=wall_locs, door_locs=door_locs)
         actions, bias_angle = self.generate_actions(n_steps=n_steps)
         return location, actions, bias_angle
@@ -485,10 +446,7 @@ class DotDataset(torch.utils.data.Dataset):
         if size is None:
             size = 1
         effective_range = (self.config.img_size - 1) - 2 * self.padding
-        location = (
-            torch.rand(size=(size, 2), device=self.device) * effective_range
-            + self.padding
-        )
+        location = torch.rand(size=(size, 2), device=self.device) * effective_range + self.padding
         left_walls = wall_locs - self.config.wall_width // 2
         right_walls = wall_locs + self.config.wall_width // 2
         door_top = door_locs + self.config.door_space
@@ -503,18 +461,10 @@ class DotDataset(torch.utils.data.Dataset):
 
         if inside_walls.any():
             change_to_ef = (torch.rand(size) < 0.5).to(door_locs.device)
-            new_x_left = sample_uniformly_between(
-                torch.full((size,), min_val).to(door_locs.device), left_walls
-            )
-            new_x_right = sample_uniformly_between(
-                right_walls, torch.full((size,), max_val).to(door_locs.device)
-            )
-            location[inside_walls & change_to_ef, 0] = new_x_left[
-                inside_walls & change_to_ef
-            ]
-            location[inside_walls & ~change_to_ef, 0] = new_x_right[
-                inside_walls & ~change_to_ef
-            ]
+            new_x_left = sample_uniformly_between(torch.full((size,), min_val).to(door_locs.device), left_walls)
+            new_x_right = sample_uniformly_between(right_walls, torch.full((size,), max_val).to(door_locs.device))
+            location[inside_walls & change_to_ef, 0] = new_x_left[inside_walls & change_to_ef]
+            location[inside_walls & ~change_to_ef, 0] = new_x_right[inside_walls & ~change_to_ef]
         return location
 
     def sample_walls(self):
@@ -527,9 +477,7 @@ class DotDataset(torch.utils.data.Dataset):
         )
         if self.config.dup_traj_rate > 0:
             raise NotImplementedError()
-        return self.generate_transitions(
-            start_location, actions, bias_angle, walls=walls
-        )
+        return self.generate_transitions(start_location, actions, bias_angle, walls=walls)
 
     @abstractmethod
     def generate_transitions(self, location, actions, bias_angle, walls=None):
@@ -562,12 +510,8 @@ class DotDataset(torch.utils.data.Dataset):
             angles.append((angles[-1] + noise).fmod(2 * torch.pi))
         angles = torch.stack(angles, dim=1)
 
-        a = (
-            self.config.action_lower_bd - self.config.action_step_mean
-        ) / self.config.action_step_std
-        b = (
-            self.config.action_upper_bd - self.config.action_step_mean
-        ) / self.config.action_step_std
+        a = (self.config.action_lower_bd - self.config.action_step_mean) / self.config.action_step_std
+        b = (self.config.action_upper_bd - self.config.action_step_mean) / self.config.action_step_std
         tn_dist = truncnorm(
             a,
             b,
@@ -617,8 +561,7 @@ class WallDataset(DotDataset):
         self.layouts = layouts
         super().__init__(config)
         log.info(
-            f"WallDataset: {len(self.layouts)} layout(s), "
-            f"size={config.size}, sample_length={config.sample_length}"
+            f"WallDataset: {len(self.layouts)} layout(s), size={config.size}, sample_length={config.sample_length}"
         )
 
     def render_location(self, locations: torch.Tensor) -> torch.Tensor:
@@ -634,12 +577,12 @@ class WallDataset(DotDataset):
             return torch.empty(0, 2)
         unit_direction = direction / direction_norm
 
-        a_coeff = (
-            self.config.expert_action_lower_bd - self.config.expert_action_step_mean
-        ) / (self.config.expert_action_step_std + eps)
-        b_coeff = (
-            self.config.expert_action_upper_bd - self.config.expert_action_step_mean
-        ) / (self.config.expert_action_step_std + eps)
+        a_coeff = (self.config.expert_action_lower_bd - self.config.expert_action_step_mean) / (
+            self.config.expert_action_step_std + eps
+        )
+        b_coeff = (self.config.expert_action_upper_bd - self.config.expert_action_step_mean) / (
+            self.config.expert_action_step_std + eps
+        )
         tn_dist = truncnorm(
             a_coeff,
             b_coeff,
@@ -697,9 +640,7 @@ class WallDataset(DotDataset):
         right_pos = torch.stack([right_x, right_y]).transpose(0, 1)
         return left_pos, right_pos
 
-    def generate_expert_cross_wall_state_and_actions(
-        self, wall_locs=None, door_locs=None, n_steps=17
-    ):
+    def generate_expert_cross_wall_state_and_actions(self, wall_locs=None, door_locs=None, n_steps=17):
         bs = wall_locs.size(0)
         door_top = door_locs + self.config.door_space
         door_bot = door_locs - self.config.door_space
@@ -729,9 +670,7 @@ class WallDataset(DotDataset):
         def in_middle(x, y, left, right, top, bot):
             return left <= x <= right and bot <= y <= top
 
-        expert_actions = torch.zeros((bs, self.config.n_steps - 1, 2)).to(
-            wall_locs.device
-        )
+        expert_actions = torch.zeros((bs, self.config.n_steps - 1, 2)).to(wall_locs.device)
 
         for i in range(bs):
             curr_pos = start_pos[i]
@@ -770,9 +709,7 @@ class WallDataset(DotDataset):
         valid_idxs = torch.tensor(list(range(bs))).to(wall_locs.device)
         return start_pos, expert_actions, valid_idxs
 
-    def generate_expert_cross_wall_state_and_actions_old(
-        self, wall_locs=None, door_locs=None, n_steps=17
-    ):
+    def generate_expert_cross_wall_state_and_actions_old(self, wall_locs=None, door_locs=None, n_steps=17):
         bs = wall_locs.size(0)
         left_wall_locs = wall_locs - self.config.wall_width // 2
         right_wall_locs = wall_locs + self.config.wall_width // 2
@@ -786,9 +723,7 @@ class WallDataset(DotDataset):
         ).to(door_locs.device)
         loc_at_door = torch.stack([x, y]).transpose(0, 1)
 
-        left_pos, right_pos = self.generate_cross_wall_points(
-            wall_locs, action_padding=self.config.action_upper_bd * 2
-        )
+        left_pos, right_pos = self.generate_cross_wall_points(wall_locs, action_padding=self.config.action_upper_bd * 2)
 
         cw_actions = torch.zeros((bs, n_steps - 1, 2))
         cw_start_loc = torch.zeros((bs, 2))
@@ -804,9 +739,7 @@ class WallDataset(DotDataset):
             if len(left_actions) + len(right_actions) < n_steps - 1:
                 continue
 
-            actions = torch.cat(
-                [torch.flip(left_actions, dims=[0]) * -1, right_actions]
-            )
+            actions = torch.cat([torch.flip(left_actions, dims=[0]) * -1, right_actions])
             start = left_goal
             if random.random() < 0.5:
                 actions = torch.flip(actions, dims=[0]) * -1
@@ -859,12 +792,10 @@ class WallDataset(DotDataset):
 
         for i in range(bs):
             step = step_idxs[i]
-            traj = torch.cat(
-                [
-                    torch.flip(actions_dir_left[i][:step], dims=[0]) * -1,
-                    actions_dir_right[i][1 : n_steps - step],
-                ]
-            )
+            traj = torch.cat([
+                torch.flip(actions_dir_left[i][:step], dims=[0]) * -1,
+                actions_dir_right[i][1 : n_steps - step],
+            ])
             step_sum_before_door = traj[:step].sum(dim=0)
 
             if random.random() < 0.5:
@@ -902,9 +833,7 @@ class WallDataset(DotDataset):
                 wall_y = torch.zeros(1, device=wall_locs.device)
                 while True:
                     wall_y = sample_uniformly_between(
-                        torch.tensor(
-                            [self.config.border_wall_loc], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.border_wall_loc], device=wall_locs.device),
                         torch.tensor(
                             [self.config.img_size - self.config.border_wall_loc],
                             device=wall_locs.device,
@@ -916,9 +845,7 @@ class WallDataset(DotDataset):
                 start_from_left = random.random() < 0.5
                 if start_from_left:
                     start_x = sample_uniformly_between(
-                        torch.tensor(
-                            [self.config.border_wall_loc], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.border_wall_loc], device=wall_locs.device),
                         left_wall_locs[i : i + 1] - 2,
                     )
                     direction = torch.tensor([1.0, 0.0], device=wall_locs.device)
@@ -931,9 +858,7 @@ class WallDataset(DotDataset):
                         ),
                     )
                     direction = torch.tensor([-1.0, 0.0], device=wall_locs.device)
-                start_pos = torch.tensor(
-                    [start_x.item(), wall_y.item()], device=wall_locs.device
-                )
+                start_pos = torch.tensor([start_x.item(), wall_y.item()], device=wall_locs.device)
 
             else:
                 border_choice = random.randint(0, 3)
@@ -942,63 +867,45 @@ class WallDataset(DotDataset):
                 if border_choice == 0:  # Top wall
                     start_y = sample_uniformly_between(
                         torch.tensor([bwl + 5], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl - 5], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl - 5], device=wall_locs.device),
                     )
                     start_x = sample_uniformly_between(
                         torch.tensor([bwl], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl], device=wall_locs.device),
                     )
                     direction = torch.tensor([0.0, -1.0], device=wall_locs.device)
                 elif border_choice == 1:  # Bottom wall
                     start_y = sample_uniformly_between(
                         torch.tensor([bwl + 5], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl - 5], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl - 5], device=wall_locs.device),
                     )
                     start_x = sample_uniformly_between(
                         torch.tensor([bwl], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl], device=wall_locs.device),
                     )
                     direction = torch.tensor([0.0, 1.0], device=wall_locs.device)
                 elif border_choice == 2:  # Left wall
                     start_x = sample_uniformly_between(
                         torch.tensor([bwl + 5], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl - 5], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl - 5], device=wall_locs.device),
                     )
                     start_y = sample_uniformly_between(
                         torch.tensor([bwl], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl], device=wall_locs.device),
                     )
                     direction = torch.tensor([-1.0, 0.0], device=wall_locs.device)
                 else:  # Right wall
                     start_x = sample_uniformly_between(
                         torch.tensor([bwl + 5], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl - 5], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl - 5], device=wall_locs.device),
                     )
                     start_y = sample_uniformly_between(
                         torch.tensor([bwl], device=wall_locs.device),
-                        torch.tensor(
-                            [self.config.img_size - bwl], device=wall_locs.device
-                        ),
+                        torch.tensor([self.config.img_size - bwl], device=wall_locs.device),
                     )
                     direction = torch.tensor([1.0, 0.0], device=wall_locs.device)
 
-                start_pos = torch.tensor(
-                    [start_x.item(), start_y.item()], device=wall_locs.device
-                )
+                start_pos = torch.tensor([start_x.item(), start_y.item()], device=wall_locs.device)
 
             direction_angle = self.vec_to_angle(direction.unsqueeze(0))
             bias_angle = self.angle_to_vec(direction_angle).to(self.device)
@@ -1027,12 +934,10 @@ class WallDataset(DotDataset):
         if self.config.cross_wall_rate:
             cw_count = np.random.rand() < self.config.cross_wall_rate
             if cw_count:
-                cw_locations, cw_actions, _ = (
-                    self.generate_cross_wall_state_and_actions(
-                        wall_locs=wall_locs[:cw_count],
-                        door_locs=door_locs[:cw_count],
-                        n_steps=n_steps,
-                    )
+                cw_locations, cw_actions, _ = self.generate_cross_wall_state_and_actions(
+                    wall_locs=wall_locs[:cw_count],
+                    door_locs=door_locs[:cw_count],
+                    n_steps=n_steps,
                 )
                 location[:cw_count] = cw_locations
                 actions[:cw_count] = cw_actions
@@ -1042,28 +947,20 @@ class WallDataset(DotDataset):
             bump_count = math.ceil(self.config.wall_bump_rate)
             bump_count = min(bump_count, 1 - modified_count)
             if bump_count > 0:
-                bump_locations, bump_actions = (
-                    self.generate_wall_bump_state_and_actions(
-                        wall_locs=wall_locs[
-                            modified_count : modified_count + bump_count
-                        ],
-                        door_locs=door_locs[
-                            modified_count : modified_count + bump_count
-                        ],
-                        n_steps=n_steps,
-                    )
+                bump_locations, bump_actions = self.generate_wall_bump_state_and_actions(
+                    wall_locs=wall_locs[modified_count : modified_count + bump_count],
+                    door_locs=door_locs[modified_count : modified_count + bump_count],
+                    n_steps=n_steps,
                 )
                 location[modified_count : modified_count + bump_count] = bump_locations
                 actions[modified_count : modified_count + bump_count] = bump_actions
                 modified_count += bump_count
 
         if self.config.expert_cross_wall_rate:
-            ecw_locations, ecw_actions, valid_traj_idxs = (
-                self.generate_expert_cross_wall_state_and_actions(
-                    wall_locs=wall_locs,
-                    door_locs=door_locs,
-                    n_steps=n_steps,
-                )
+            ecw_locations, ecw_actions, valid_traj_idxs = self.generate_expert_cross_wall_state_and_actions(
+                wall_locs=wall_locs,
+                door_locs=door_locs,
+                n_steps=n_steps,
             )
             max_ecw_count = math.ceil(self.config.expert_cross_wall_rate)
             valid_traj_idxs = valid_traj_idxs[:max_ecw_count]
@@ -1094,9 +991,7 @@ class WallDataset(DotDataset):
         across_wall = (current_right != next_right) & (current_left != next_left)
         return inside_wall | across_wall
 
-    def check_pass_through_door(
-        self, current_location, next_location, wall_loc, door_loc
-    ):
+    def check_pass_through_door(self, current_location, next_location, wall_loc, door_loc):
         half_width = self.config.wall_width // 2
         left_wall = wall_loc - half_width
         right_wall = wall_loc + half_width
@@ -1105,31 +1000,15 @@ class WallDataset(DotDataset):
         a = d[1] / d[0]
         b = current_location[1] - a * current_location[0]
 
-        if (
-            torch.sign(left_wall - current_location[0])
-            * torch.sign(left_wall - next_location[0])
-            < 0
-        ):
+        if torch.sign(left_wall - current_location[0]) * torch.sign(left_wall - next_location[0]) < 0:
             y_left = a * left_wall + b
-            pass_left_wall = (
-                door_loc - self.config.door_space
-                <= y_left
-                <= door_loc + self.config.door_space
-            )
+            pass_left_wall = door_loc - self.config.door_space <= y_left <= door_loc + self.config.door_space
         else:
             pass_left_wall = True
 
-        if (
-            torch.sign(right_wall - current_location[0])
-            * torch.sign(right_wall - next_location[0])
-            < 0
-        ):
+        if torch.sign(right_wall - current_location[0]) * torch.sign(right_wall - next_location[0]) < 0:
             y_right = a * right_wall + b
-            pass_right_wall = (
-                door_loc - self.config.door_space
-                <= y_right
-                <= door_loc + self.config.door_space
-            )
+            pass_right_wall = door_loc - self.config.door_space <= y_right <= door_loc + self.config.door_space
         else:
             pass_right_wall = True
 
@@ -1229,39 +1108,16 @@ class WallDataset(DotDataset):
             top_border, bot_border = left_border, right_border
 
             check_border_intersection = (
-                (
-                    (
-                        torch.sign(locations[-1][:, 0] - left_border)
-                        * torch.sign(next_location[:, 0] - left_border)
-                    )
-                    <= 0
-                )
+                ((torch.sign(locations[-1][:, 0] - left_border) * torch.sign(next_location[:, 0] - left_border)) <= 0)
                 | (
-                    (
-                        torch.sign(locations[-1][:, 0] - right_border)
-                        * torch.sign(next_location[:, 0] - right_border)
-                    )
+                    (torch.sign(locations[-1][:, 0] - right_border) * torch.sign(next_location[:, 0] - right_border))
                     <= 0
                 )
-                | (
-                    (
-                        torch.sign(locations[-1][:, 1] - top_border)
-                        * torch.sign(next_location[:, 1] - top_border)
-                    )
-                    <= 0
-                )
-                | (
-                    (
-                        torch.sign(locations[-1][:, 1] - bot_border)
-                        * torch.sign(next_location[:, 1] - bot_border)
-                    )
-                    <= 0
-                )
+                | ((torch.sign(locations[-1][:, 1] - top_border) * torch.sign(next_location[:, 1] - top_border)) <= 0)
+                | ((torch.sign(locations[-1][:, 1] - bot_border) * torch.sign(next_location[:, 1] - bot_border)) <= 0)
             )
 
-            check_wall_inter = self.check_wall_intersection(
-                locations[-1], next_location, walls[0]
-            )
+            check_wall_inter = self.check_wall_intersection(locations[-1], next_location, walls[0])
 
             check_wall_width_inter = self.check_wall_width_intersection(
                 locations=locations[-1],
@@ -1270,9 +1126,7 @@ class WallDataset(DotDataset):
                 doors=walls[1],
             )
 
-            check_intersection = (
-                check_border_intersection | check_wall_inter | check_wall_width_inter
-            )
+            check_intersection = check_border_intersection | check_wall_inter | check_wall_width_inter
 
             for j in check_intersection.nonzero():
                 if check_border_intersection[j] or check_wall_width_inter[j]:
@@ -1303,12 +1157,8 @@ class WallDataset(DotDataset):
 
         # Temporal downsampling
         if self.config.n_steps_reduce_factor > 1:
-            states_with_walls = states_with_walls[
-                :, :: self.config.n_steps_reduce_factor
-            ]
-            locations_stacked = locations_stacked[
-                :, :: self.config.n_steps_reduce_factor
-            ]
+            states_with_walls = states_with_walls[:, :: self.config.n_steps_reduce_factor]
+            locations_stacked = locations_stacked[:, :: self.config.n_steps_reduce_factor]
             reduced_chunks = actions.shape[1] // self.config.n_steps_reduce_factor
             action_chunks = torch.chunk(actions, chunks=reduced_chunks, dim=1)
             actions = torch.cat(
@@ -1324,9 +1174,9 @@ class WallDataset(DotDataset):
         # Normalize
         if self.config.normalize:
             states_with_walls = _normalize_two_rooms_obs(states_with_walls)
-            locations_stacked = (
-                locations_stacked - TWO_ROOMS_LOCATION_MEAN.to(locations_stacked.device)
-            ) / (TWO_ROOMS_LOCATION_STD.to(locations_stacked.device) + 1e-6)
+            locations_stacked = (locations_stacked - TWO_ROOMS_LOCATION_MEAN.to(locations_stacked.device)) / (
+                TWO_ROOMS_LOCATION_STD.to(locations_stacked.device) + 1e-6
+            )
 
         # Drop last timestep of visual/locations to align with actions
         # states_with_walls: [bs, T, C, H, W] -> [bs, T-1, C, H, W]
@@ -1403,10 +1253,7 @@ class WallDataset(DotDataset):
 
         res = (
             wall_mask
-            * (
-                (hole_locs_r < grid_y - self.config.door_space)
-                + (hole_locs_r > grid_y + self.config.door_space)
-            )
+            * ((hole_locs_r < grid_y - self.config.door_space) + (hole_locs_r > grid_y + self.config.door_space))
         ).float()
 
         bwl = self.config.border_wall_loc

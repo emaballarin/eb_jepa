@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import numpy as np
 
 from . import q_iteration
-from .gridcraft import grid_env, grid_spec
+from .gridcraft import grid_env
+from .gridcraft import grid_spec
 
 ZEROS = np.zeros((2,), dtype=np.float32)
 ONES = np.zeros((2,), dtype=np.float32)
@@ -50,17 +50,10 @@ class WaypointController(object):
         action = self.p_gain * prop + self.d_gain * velocity
 
         dist_next_wpnt = np.linalg.norm(location - next_wpnt)
-        if (
-            task_not_solved
-            and (dist_next_wpnt < self.solve_thresh)
-            and (vel_norm < self.vel_thresh)
-        ):
+        if task_not_solved and (dist_next_wpnt < self.solve_thresh) and (vel_norm < self.vel_thresh):
             self._waypoint_idx += 1
             if self._waypoint_idx == len(self._waypoints) - 1:
-                assert (
-                    np.linalg.norm(self._waypoints[self._waypoint_idx] - self._target)
-                    <= self.solve_thresh
-                )
+                assert np.linalg.norm(self._waypoints[self._waypoint_idx] - self._target) <= self.solve_thresh
 
         self._waypoint_prev_loc = location
         action = np.clip(action, -1.0, 1.0)

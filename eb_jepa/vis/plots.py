@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import math
 import os
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import cv2
 import imageio
@@ -12,14 +11,12 @@ import seaborn as sns
 import torch
 
 from eb_jepa.utils.logging import get_logger
-from eb_jepa.vis.frames import (
-    FIGSIZE_BASE,
-    add_border,
-    add_text_overlay,
-    prepare_frame,
-    save_gif_as_pdf_unroll,
-    to_numpy,
-)
+from eb_jepa.vis.frames import add_border
+from eb_jepa.vis.frames import add_text_overlay
+from eb_jepa.vis.frames import FIGSIZE_BASE
+from eb_jepa.vis.frames import prepare_frame
+from eb_jepa.vis.frames import save_gif_as_pdf_unroll
+from eb_jepa.vis.frames import to_numpy
 
 logger = get_logger(__name__)
 
@@ -87,9 +84,7 @@ def create_comparison_gif(
         thickness = max(1, upscale_factor)
         for col, title in enumerate(titles):
             col_x = col * up_img_width + up_img_width // 2
-            (tw, _), _ = cv2.getTextSize(
-                title, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness
-            )
+            (tw, _), _ = cv2.getTextSize(title, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
             cv2.putText(
                 canvas,
                 title,
@@ -105,11 +100,7 @@ def create_comparison_gif(
         pred_col_start = 2 if gt_dec is not None else 1
         for row in range(num_rows):
             base_y = title_height + row * up_img_height
-            for col, seq in enumerate(
-                seqs
-                if gt_dec is None
-                else [gt_seq, gt_dec, pred_seq_true, pred_seq_random]
-            ):
+            for col, seq in enumerate(seqs if gt_dec is None else [gt_seq, gt_dec, pred_seq_true, pred_seq_random]):
                 frame = prepare_frame(seq[row, t])
                 frame_upscaled = cv2.resize(
                     frame,
@@ -131,16 +122,10 @@ def create_comparison_gif(
                             width=border_w,
                         )
                 col_x = col * up_img_width
-                canvas[
-                    base_y : base_y + up_img_height, col_x : col_x + up_img_width
-                ] = frame_upscaled
+                canvas[base_y : base_y + up_img_height, col_x : col_x + up_img_width] = frame_upscaled
 
         # Timestep indicator with larger font
-        label = (
-            frame_labels[t]
-            if frame_labels is not None and t < len(frame_labels)
-            else f"t={t}"
-        )
+        label = frame_labels[t] if frame_labels is not None and t < len(frame_labels) else f"t={t}"
         add_text_overlay(canvas, label, "bottom_right", font_scale=1.0, thickness=2)
         frames.append(canvas)
 
@@ -156,9 +141,7 @@ def create_comparison_gif(
     if gt_dec is not None:
         pdf_sequences.append([prepare_frame(gt_dec[0, t]) for t in range(seq_length)])
         row_labels.append("Dec GT")
-    pdf_sequences.append(
-        [prepare_frame(pred_seq_true[0, t]) for t in range(seq_length)]
-    )
+    pdf_sequences.append([prepare_frame(pred_seq_true[0, t]) for t in range(seq_length)])
     row_labels.append("GT Act")
 
     # "GT Act" is the last row in the PDF (GT rows don't need annotation)
@@ -218,32 +201,18 @@ def analyze_distances(
     device: torch.device,
 ):
     """Analyze distances between observations and goal, generate plots."""
-    coords = torch.stack(
-        [
-            (
-                torch.as_tensor(x["dot_position"])
-                if not isinstance(x["dot_position"], torch.Tensor)
-                else x["dot_position"]
-            )
-            for x in infos
-        ]
-    ).unsqueeze(1)
+    coords = torch.stack([
+        (torch.as_tensor(x["dot_position"]) if not isinstance(x["dot_position"], torch.Tensor) else x["dot_position"])
+        for x in infos
+    ]).unsqueeze(1)
 
-    distances = (
-        torch.norm(coords[..., -1, :3] - goal_position[:3].unsqueeze(0), dim=-1)
-        .detach()
-        .cpu()
-    )
+    distances = torch.norm(coords[..., -1, :3] - goal_position[:3].unsqueeze(0), dim=-1).detach().cpu()
 
     sns.set_theme()
     figsize = (4.0, 3.0)
     plot_distances(distances, plot_prefix + "_distances.pdf", figsize=figsize)
 
-    all_states = (
-        normalizer.normalize_state(torch.cat([obses, goal_state.unsqueeze(0)]))
-        .unsqueeze(-3)
-        .to(device)
-    )
+    all_states = normalizer.normalize_state(torch.cat([obses, goal_state.unsqueeze(0)])).unsqueeze(-3).to(device)
     all_encs = model.encode(all_states)
     diffs = compute_embed_differences(all_encs).detach().cpu()
 
@@ -294,9 +263,7 @@ def plot_losses(
                 [elite_mean, elite_mean[-1:].expand(pad_len, *elite_mean.shape[1:])],
                 dim=0,
             )
-            elite_std = torch.cat(
-                [elite_std, elite_std[-1:].expand(pad_len, *elite_std.shape[1:])], dim=0
-            )
+            elite_std = torch.cat([elite_std, elite_std[-1:].expand(pad_len, *elite_std.shape[1:])], dim=0)
         padded_losses.append(loss)
         padded_elite_mean.append(elite_mean)
         padded_elite_std.append(elite_std)

@@ -1,20 +1,23 @@
 """Hierarchical JEPA module for multi-scale world modeling and planning."""
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import torch
 import torch.nn as nn
 
-from eb_jepa.builders import (
-    build_action_encoder,
-    build_action_regularizer,
-    build_cost_module,
-    build_encoder,
-    build_predcost,
-    build_predictor,
-    build_regularizer,
-)
-from eb_jepa.jepa import JEPA, JEPAWithCostModule
+from eb_jepa.builders import build_action_encoder
+from eb_jepa.builders import build_action_regularizer
+from eb_jepa.builders import build_cost_module
+from eb_jepa.builders import build_encoder
+from eb_jepa.builders import build_predcost
+from eb_jepa.builders import build_predictor
+from eb_jepa.builders import build_regularizer
+from eb_jepa.jepa import JEPA
+from eb_jepa.jepa import JEPAWithCostModule
 from eb_jepa.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -142,9 +145,7 @@ class HierarchicalJEPA(nn.Module):
         """
         scale = 1
         for l in range(1, level):
-            scale *= self.temporal_strides[
-                l - 1
-            ]  # temporal_strides[0] is stride from level 1->2
+            scale *= self.temporal_strides[l - 1]  # temporal_strides[0] is stride from level 1->2
         return scale
 
     @torch.no_grad()
@@ -159,9 +160,7 @@ class HierarchicalJEPA(nn.Module):
         """
         return self.levels[0].encoder(observations)
 
-    def encode_hierarchical(
-        self, observations: torch.Tensor
-    ) -> Dict[int, torch.Tensor]:
+    def encode_hierarchical(self, observations: torch.Tensor) -> Dict[int, torch.Tensor]:
         """Encode observations through all hierarchy levels via strided subsampling.
 
         Args:
@@ -330,11 +329,7 @@ class HierarchicalJEPA(nn.Module):
                 f"{3 * max_scale}, ..."
             )
 
-        encodings = (
-            _encodings
-            if _encodings is not None
-            else self.encode_hierarchical(observations)
-        )
+        encodings = _encodings if _encodings is not None else self.encode_hierarchical(observations)
 
         total_loss = torch.tensor(0.0, device=observations.device)
         total_rloss = torch.tensor(0.0, device=observations.device)
@@ -345,20 +340,12 @@ class HierarchicalJEPA(nn.Module):
         all_predicted_states = {}
         all_steps_per_level = {} if return_all_steps else None
 
-        levels_to_unroll = (
-            levels if levels is not None else list(range(1, self.num_levels + 1))
-        )
+        levels_to_unroll = levels if levels is not None else list(range(1, self.num_levels + 1))
 
         # Pre-compute aggregated actions with intermediates for action regularization
         action_intermediates = None
-        if (
-            actions is not None
-            and compute_loss
-            and self.action_regularizers is not None
-        ):
-            _, action_intermediates = self.aggregate_actions(
-                actions, self.num_levels, return_intermediates=True
-            )
+        if actions is not None and compute_loss and self.action_regularizers is not None:
+            _, action_intermediates = self.aggregate_actions(actions, self.num_levels, return_intermediates=True)
 
         for level in levels_to_unroll:
             state_l = encodings[level]
@@ -401,12 +388,11 @@ class HierarchicalJEPA(nn.Module):
                 ):
                     actions_encoded = (
                         action_intermediates[level]
-                        if action_intermediates is not None
-                        and level in action_intermediates
+                        if action_intermediates is not None and level in action_intermediates
                         else actions_l
                     )
-                    action_rloss, action_rloss_unweight, action_rloss_dict = (
-                        self.action_regularizers[level - 1](actions_encoded)
+                    action_rloss, action_rloss_unweight, action_rloss_dict = self.action_regularizers[level - 1](
+                        actions_encoded
                     )
                     loss_l = loss_l + action_rloss
                     rloss_l = rloss_l + action_rloss
@@ -614,8 +600,7 @@ def build_hierarchical_jepa(
 
             aenc_cfg = (
                 level_cfg.action_encoder
-                if hasattr(level_cfg, "action_encoder")
-                and level_cfg.action_encoder is not None
+                if hasattr(level_cfg, "action_encoder") and level_cfg.action_encoder is not None
                 else None
             )
             action_encoder, current_action_dim = build_action_encoder(
@@ -629,14 +614,9 @@ def build_hierarchical_jepa(
         if level == 1:
             action_dim_for_predictor = data_action_dim
         else:
-            has_action_encoder = (
-                hasattr(level_cfg, "action_encoder")
-                and level_cfg.action_encoder is not None
-            )
+            has_action_encoder = hasattr(level_cfg, "action_encoder") and level_cfg.action_encoder is not None
             action_dim_for_predictor = (
-                level_cfg.action_encoder.get("output_dim", data_action_dim)
-                if has_action_encoder
-                else prev_action_dim
+                level_cfg.action_encoder.get("output_dim", data_action_dim) if has_action_encoder else prev_action_dim
             )
 
         predictor = build_predictor(
@@ -668,9 +648,7 @@ def build_hierarchical_jepa(
 
         # -- Assemble per-level JEPA --
         if cost_module is not None:
-            jepa_level = JEPAWithCostModule(
-                encoder, action_encoder, predictor, reg, predcost, cost_module
-            )
+            jepa_level = JEPAWithCostModule(encoder, action_encoder, predictor, reg, predcost, cost_module)
         else:
             jepa_level = JEPA(encoder, action_encoder, predictor, reg, predcost)
         jepa_levels.append(jepa_level)
@@ -694,9 +672,7 @@ def build_hierarchical_jepa(
 
     has_action_regs = any(r is not None for r in action_reg_list)
     if has_action_regs:
-        action_regularizers = nn.ModuleList(
-            [r if r is not None else None for r in action_reg_list]
-        )
+        action_regularizers = nn.ModuleList([r if r is not None else None for r in action_reg_list])
     else:
         action_regularizers = None
 

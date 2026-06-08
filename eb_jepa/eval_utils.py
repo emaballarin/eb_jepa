@@ -6,7 +6,8 @@ from pathlib import Path
 import torch
 import yaml
 
-from eb_jepa.planning.evaluation import main_eval, main_unroll_eval
+from eb_jepa.planning.evaluation import main_eval
+from eb_jepa.planning.evaluation import main_unroll_eval
 from eb_jepa.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -146,41 +147,20 @@ def launch_unroll_eval(
 
     unroll_levels = cfg.get("unroll_levels", None)
     if unroll_levels is None:
-        unroll_levels = (
-            cfg.eval.get("unroll_levels", [1]) if hasattr(cfg, "eval") else [1]
-        )
+        unroll_levels = cfg.eval.get("unroll_levels", [1]) if hasattr(cfg, "eval") else [1]
     unroll_levels = list(unroll_levels)
 
     for level in unroll_levels:
         prefix = f"val_rollout/level{level}"
-        steps = sorted(
-            int(k.split("/")[-1])
-            for k in eval_results
-            if k.startswith(f"{prefix}/mean_mse/")
-        )
+        steps = sorted(int(k.split("/")[-1]) for k in eval_results if k.startswith(f"{prefix}/mean_mse/"))
         if steps:
-            mean_values = " | ".join(
-                [f"t{i}={eval_results[f'{prefix}/mean_mse/{i}']:.2f}" for i in steps]
-            )
-            std_values = " | ".join(
-                [f"{i}: {eval_results[f'{prefix}/std_mse/{i}']:.2f}" for i in steps]
-            )
-            logger.info(
-                f"Unroll eval level {level} - mean_mse: {mean_values} | std_mse: {std_values}"
-            )
+            mean_values = " | ".join([f"t{i}={eval_results[f'{prefix}/mean_mse/{i}']:.2f}" for i in steps])
+            std_values = " | ".join([f"{i}: {eval_results[f'{prefix}/std_mse/{i}']:.2f}" for i in steps])
+            logger.info(f"Unroll eval level {level} - mean_mse: {mean_values} | std_mse: {std_values}")
 
-        lpips_steps = sorted(
-            int(k.split("/")[-1])
-            for k in eval_results
-            if k.startswith(f"{prefix}/mean_lpips/")
-        )
+        lpips_steps = sorted(int(k.split("/")[-1]) for k in eval_results if k.startswith(f"{prefix}/mean_lpips/"))
         if lpips_steps:
-            lpips_values = " | ".join(
-                [
-                    f"t{i}={eval_results[f'{prefix}/mean_lpips/{i}']:.4f}"
-                    for i in lpips_steps
-                ]
-            )
+            lpips_values = " | ".join([f"t{i}={eval_results[f'{prefix}/mean_lpips/{i}']:.4f}" for i in lpips_steps])
             logger.info(f"Unroll eval level {level} - mean_lpips: {lpips_values}")
 
     model.train()

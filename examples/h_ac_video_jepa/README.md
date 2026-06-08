@@ -19,17 +19,18 @@ Hierarchical JEPA extends the standard action-conditioned JEPA by introducing L 
 ### Temporal Stride
 
 Each level $\ell > 1$ has a **temporal stride** $s(\ell)$ that determines the temporal downsampling factor from level $\ell-1$ to level $\ell$. This is a key architecture hyperparameter that controls the temporal scale at which each level operates. For example, with $s(2) = 4$ and $s(3) = 2$:
+
 - Level 2 operates at 1/4 the temporal resolution of level 1
 - Level 3 operates at 1/2 the temporal resolution of level 2 (1/8 of level 1)
 
 ### L-Level Hierarchy
 
-| Level | Encoder | Predictor | Actions | Role |
-|-------|---------|-----------|---------|------|
-| 0 (env) | $f$ (groundtruth) | $f$ | Raw actions $a_t \in \mathcal{A}$ | True environment dynamics (not implemented) |
-| 1 (finest) | $E^1$ (e.g. Impala CNN) from observations | $P^1$ (1-step) | Raw actions $a_t \in \mathcal{A}$ | Fine-grained single-step transitions |
-| $\ell > 1$ | $E^\ell$ (MLP) from strided $z^{\ell-1}$ | $P^\ell$ ($s(\ell)$-step) | Encoded macro-actions via $A^\ell$ | Abstract, temporally extended dynamics |
-| L (coarsest) | $E^L$ | $P^L$ ($s(L)$-step) | Encoded macro-actions via $A^L$ | Plans towards final goal |
+| Level        | Encoder                                   | Predictor                 | Actions                            | Role                                        |
+| ------------ | ----------------------------------------- | ------------------------- | ---------------------------------- | ------------------------------------------- |
+| 0 (env)      | $f$ (groundtruth)                         | $f$                       | Raw actions $a_t \in \mathcal{A}$  | True environment dynamics (not implemented) |
+| 1 (finest)   | $E^1$ (e.g. Impala CNN) from observations | $P^1$ (1-step)            | Raw actions $a_t \in \mathcal{A}$  | Fine-grained single-step transitions        |
+| $\ell > 1$   | $E^\ell$ (MLP) from strided $z^{\ell-1}$  | $P^\ell$ ($s(\ell)$-step) | Encoded macro-actions via $A^\ell$ | Abstract, temporally extended dynamics      |
+| L (coarsest) | $E^L$                                     | $P^L$ ($s(L)$-step)       | Encoded macro-actions via $A^L$    | Plans towards final goal                    |
 
 ### Mathematical Formalization
 
@@ -51,14 +52,14 @@ $$\hat{z}^\ell_{t+1} = P^\ell(\hat{z}^\ell_t, a^\ell_t)$$
 Training is driven by `HierarchicalJEPA.unroll()`, which processes the hierarchy **bottom-up**:
 
 1. **Bottom-up state encoding** via `encode_hierarchical()`:
-   - Level 1: $z^1 = E^1(\text{observations})$
-   - Level $\ell > 1$: $z^\ell = E^\ell(z^{\ell-1}_{::s(\ell)})$ (strided subsampling with stride $s(\ell)$)
+    - Level 1: $z^1 = E^1(\text{observations})$
+    - Level $\ell > 1$: $z^\ell = E^\ell(z^{\ell-1}_{::s(\ell)})$ (strided subsampling with stride $s(\ell)$)
 2. **Action aggregation** via `aggregate_actions()`:
-   - Level 1: raw actions with last action dropped ($T$ states $\to$ $T-1$ transitions)
-   - Level $\ell > 1$: learned action encoder $A^\ell$ aggregates stride-sized windows
+    - Level 1: raw actions with last action dropped ($T$ states $\to$ $T-1$ transitions)
+    - Level $\ell > 1$: learned action encoder $A^\ell$ aggregates stride-sized windows
 3. **Per-level unrolling** via `_unroll_at_level()`:
-   - Each level's predictor $P^\ell$ unrolls autoregressively or in parallel
-   - Prediction loss + regularization computed per level
+    - Each level's predictor $P^\ell$ unrolls autoregressively or in parallel
+    - Prediction loss + regularization computed per level
 4. **Loss aggregation**: weighted sum across all levels
 
 **Key function**: `HierarchicalJEPA.unroll(observations, actions, ...)` in `eb_jepa/h_jepa.py`
@@ -108,13 +109,14 @@ Planning proceeds **top-down** via `HierarchicalPlanner.plan()`:
    $$a^{L}_{0:H_L-1,*} = \arg\min_{a^{L}_{0:H_L-1}} C^L(\hat{z}^L_{1:H_L}, g^L)$$
    where the cost $C^L$ evaluates the sequence of predicted states against the goal.
 3. **Level $\ell < L$** (finer): extract subgoals from level $\ell+1$ trajectory, plan towards them
-   - Subgoals: $g^\ell_i := \hat{z}^{\ell+1}_i$ for $i = 1, \ldots, H_{\ell+1}$
-   - For each subgoal segment $i$:
-   $$a^{\ell}_{0:H_\ell-1,*,(i)} = \arg\min_{a^{\ell}_{0:H_\ell-1}} C^\ell(E^\ell(\hat{z}^\ell_{1:H_\ell}), g^\ell_{i+1})$$
-   where $E^\ell(\hat{z}^\ell_{1:H_\ell})$ encodes the intermediate predicted states to level $\ell+1$ for comparison with the subgoal.
+    - Subgoals: $g^\ell_i := \hat{z}^{\ell+1}_i$ for $i = 1, \ldots, H_{\ell+1}$
+    - For each subgoal segment $i$:
+      $$a^{\ell}_{0:H_\ell-1,*,(i)} = \arg\min_{a^{\ell}_{0:H_\ell-1}} C^\ell(E^\ell(\hat{z}^\ell_{1:H_\ell}), g^\ell_{i+1})$$
+      where $E^\ell(\hat{z}^\ell_{1:H_\ell})$ encodes the intermediate predicted states to level $\ell+1$ for comparison with the subgoal.
 4. **Level 1**: plan with raw actions $\to$ return executable actions
 
 **Key classes/functions**:
+
 - `HierarchicalPlanner.plan()` in `eb_jepa/planning/optimizers.py`: top-down loop
 - `HierarchicalObjective` in `eb_jepa/planning/objectives.py`: level-aware cost
 - `GCAgent._create_hierarchical_planner()` in `eb_jepa/planning/agent.py`: wiring
@@ -126,6 +128,7 @@ Instead of encoding intermediate states $\hat{z}^\ell_{1:H_\ell}$ to level $\ell
 $$a^{\ell}_{0:H_\ell-1,*,(i)} = \arg\min_{a^{\ell}_{0:H_\ell-1}} C^{\ell}_{\text{action}}\left(\left\{A^{\ell}\left(a^{\ell}_{t \cdot s(\ell) : (t+1) \cdot s(\ell)}\right)\right\}_{t=0}^{H_{\ell+1}-1}, \left\{a^{\ell+1,(i)}_{*,t}\right\}_{t=0}^{H_{\ell+1}-1}\right)$$
 
 where:
+
 - $C^{\ell}_{\text{action}}$ is a cost function in action space (e.g., $\ell_2$ distance)
 - $\left\{A^{\ell}\left(a^{\ell}_{t \cdot s(\ell) : (t+1) \cdot s(\ell)}\right)\right\}_{t=0}^{H_{\ell+1}-1}$ are the actions from level $\ell$ aggregated to level $\ell+1$ resolution
 - $\left\{a^{\ell+1,(i)}_{*,t}\right\}_{t=0}^{H_{\ell+1}-1}$ are the optimal actions obtained from planning at level $\ell+1$ for segment $i$
@@ -172,11 +175,13 @@ By default, planning starts from the coarsest level $L$ and refines top-down to 
 Levels above $\ell$ (i.e., $\ell+1, \ldots, L$) are unused during planning. Only `level_configs` for levels $1$ through $\ell$ need to be specified.
 
 This is useful for ablating the contribution of each hierarchy level. Example config:
+
 - `cfgs/planning/lvl2_mppi_ni5_ns50_ne10.yaml`: start from level 2 (`start_level: 2`)
 
 ## Backwards Compatibility
 
 Modifications to shared code (`eb_jepa/losses/`, `eb_jepa/planning/agent.py`, `eb_jepa/planning/objectives.py`, `eb_jepa/planning/optimizers.py`) are additive:
+
 - New classes (`HierarchicalObjective`, `HierarchicalPlanner`, `H_PlanningResult`) are added alongside existing ones
 - `GCAgent` dispatches to hierarchical vs. flat planning based on `plan_cfg.planner.type`
 - Existing `ReprDistObjective`, `ProjectedDistObjective`, `CEMPlanner`, `MPPIPlanner` are unchanged
@@ -187,124 +192,125 @@ Modifications to shared code (`eb_jepa/losses/`, `eb_jepa/planning/agent.py`, `e
 
 ```yaml
 model:
-  compile: true
-  num_levels: 3  # L = 3 hierarchy levels (Level 1, 2, 3)
-  rollout:
-    nsteps: 8
-    val_nsteps: 8
+    compile: true
+    num_levels: 3 # L = 3 hierarchy levels (Level 1, 2, 3)
+    rollout:
+        nsteps: 8
+        val_nsteps: 8
 
-  # Level 1 (finest): neural network encoder E^1, raw actions
-  level_1:
-    encoder:
-      architecture: impala           # E^1: CNN encoder from observations
-      stack_sizes: [16, 32, 32]
-      output_dim: 512
-    predictor:
-      type: rnn
-      num_layers: 1
-    regularizer:
-      cov_coeff: 8
-      std_coeff: 8
-      sim_coeff_t: 12
-      idm_coeff: 1                   # IDM loss to prevent collapse (recommended)
-    # No action_encoder - uses raw actions
+    # Level 1 (finest): neural network encoder E^1, raw actions
+    level_1:
+        encoder:
+            architecture: impala # E^1: CNN encoder from observations
+            stack_sizes: [16, 32, 32]
+            output_dim: 512
+        predictor:
+            type: rnn
+            num_layers: 1
+        regularizer:
+            cov_coeff: 8
+            std_coeff: 8
+            sim_coeff_t: 12
+            idm_coeff: 1 # IDM loss to prevent collapse (recommended)
+        # No action_encoder - uses raw actions
 
-  # Level 2: temporal stride 2 from level 1, encoded actions
-  level_2:
-    temporal_stride: 2
-    encoder:
-      architecture: mlp              # E^2: MLP encoder from pooled z^1
-      hidden_dims: [512, 256]
-      output_dim: 256
-    predictor:
-      type: rnn
-      num_layers: 1
-    action_encoder:                  # A^2: learned aggregation of action windows
-      hidden_dims: [64]
-      output_dim: 4
-      final_ln: true
-    regularizer:
-      cov_coeff: 4
-      std_coeff: 8
-      sim_coeff_t: 6
-      idm_coeff: 0.5
-      action_std_coeff: 4.0
-      action_cov_coeff: 2.0
+    # Level 2: temporal stride 2 from level 1, encoded actions
+    level_2:
+        temporal_stride: 2
+        encoder:
+            architecture: mlp # E^2: MLP encoder from pooled z^1
+            hidden_dims: [512, 256]
+            output_dim: 256
+        predictor:
+            type: rnn
+            num_layers: 1
+        action_encoder: # A^2: learned aggregation of action windows
+            hidden_dims: [64]
+            output_dim: 4
+            final_ln: true
+        regularizer:
+            cov_coeff: 4
+            std_coeff: 8
+            sim_coeff_t: 6
+            idm_coeff: 0.5
+            action_std_coeff: 4.0
+            action_cov_coeff: 2.0
 
-  # Level 3 (coarsest): temporal stride 2 from level 2, encoded actions
-  level_3:
-    temporal_stride: 2
-    encoder:
-      architecture: mlp              # E^3: MLP encoder from pooled z^2
-      hidden_dims: [256, 128]
-      output_dim: 128
-    predictor:
-      type: rnn
-      num_layers: 1
-    action_encoder:                  # A^3: learned aggregation of action windows
-      hidden_dims: [32]
-      output_dim: 8
-      final_ln: true
-    regularizer:
-      cov_coeff: 2
-      std_coeff: 4
-      sim_coeff_t: 3
-      idm_coeff: 0.25
-      action_std_coeff: 2.0
-      action_cov_coeff: 1.0
+    # Level 3 (coarsest): temporal stride 2 from level 2, encoded actions
+    level_3:
+        temporal_stride: 2
+        encoder:
+            architecture: mlp # E^3: MLP encoder from pooled z^2
+            hidden_dims: [256, 128]
+            output_dim: 128
+        predictor:
+            type: rnn
+            num_layers: 1
+        action_encoder: # A^3: learned aggregation of action windows
+            hidden_dims: [32]
+            output_dim: 8
+            final_ln: true
+        regularizer:
+            cov_coeff: 2
+            std_coeff: 4
+            sim_coeff_t: 3
+            idm_coeff: 0.25
+            action_std_coeff: 2.0
+            action_cov_coeff: 1.0
 
 optim:
-  lr_scales:
-    level_2: 1.0
-    level_3: 1.0
+    lr_scales:
+        level_2: 1.0
+        level_3: 1.0
 ```
 
 ### Planning (`cfgs/planning/lvl2_mppi_ni5_ns50_ne10.yaml`)
 
 ```yaml
 planner:
-  type: hierarchical
-  base_planner: mppi
-  subgoal_mode: single  # 'single' (receding horizon) or 'sequential'
-  start_level: 2
-  num_act_stepped: 2    # temporal stride of level 2
+    type: hierarchical
+    base_planner: mppi
+    subgoal_mode: single # 'single' (receding horizon) or 'sequential'
+    start_level: 2
+    num_act_stepped: 2 # temporal stride of level 2
 
-  level_configs:
-    level_1_planner:     # Finest level (stride=1, produces executable actions)
-      plan_length: 12
-      n_iters: 5
-      num_samples: 50
-      num_elites: 10
-    level_2_planner:     # Coarsest level (stride=2 relative to Level 1)
-      plan_length: 60
-      n_iters: 5
-      num_samples: 50
-      num_elites: 10
-      latent_action_stats_path: level_2_action_stats.pt
+    level_configs:
+        level_1_planner: # Finest level (stride=1, produces executable actions)
+            plan_length: 12
+            n_iters: 5
+            num_samples: 50
+            num_elites: 10
+        level_2_planner: # Coarsest level (stride=2 relative to Level 1)
+            plan_length: 60
+            n_iters: 5
+            num_samples: 50
+            num_elites: 10
+            latent_action_stats_path: level_2_action_stats.pt
 
-  # Global planner parameters
-  max_norms: [2.45]
-  max_norm_dims: [[0, 1]]
-  var_scale: 1.5
-  max_std: 2.0
-  temperature: 0.005
+    # Global planner parameters
+    max_norms: [2.45]
+    max_norm_dims: [[0, 1]]
+    var_scale: 1.5
+    max_std: 2.0
+    temperature: 0.005
 
-  planning_objective:
-    objective_type: hierarchical_repr_dist
-    distance: l2
-    sum_all_diffs: false
-    subgoal_weight: 1.0
-    goal_weight: 1.0
+    planning_objective:
+        objective_type: hierarchical_repr_dist
+        distance: l2
+        sum_all_diffs: false
+        subgoal_weight: 1.0
+        goal_weight: 1.0
 ```
 
 ## Results (Two Rooms)
 
-| Regularizer | Planning | Start Level | SR (%) | Time/ep (s) | Config |
-|-------------|----------|-------------|--------|-------------|--------|
-| VCReg | Low | 2 | 95.0 ± 5.0 | 11.4 | `vc.yaml` |
-| SIGReg | Low | 2 | 93.3 ± 2.9 | 11.6 | `sigreg.yaml` |
+| Regularizer | Planning | Start Level | SR (%)     | Time/ep (s) | Config        |
+| ----------- | -------- | ----------- | ---------- | ----------- | ------------- |
+| VCReg       | Low      | 2           | 95.0 ± 5.0 | 11.4        | `vc.yaml`     |
+| SIGReg      | Low      | 2           | 93.3 ± 2.9 | 11.6        | `sigreg.yaml` |
 
 **Notes:**
+
 - All models use the Impala-RNN (L1) + MLP (L2/L3) architecture with 3 levels and level_weights=[1,1,1]
 - Planning uses 2-level hierarchical MPPI (start_level=2, `lvl2_mppi_ni5_ns50_ne10`)
 - High-compute planning configs did not outperform low-compute for VC (pareto front saturates)
@@ -341,16 +347,16 @@ python -m examples.h_ac_video_jepa.main \
 
 ## Key Differences from AC-Video-JEPA
 
-| Aspect | AC-Video-JEPA | H-AC-Video-JEPA |
-|--------|---------------|-----------------|
-| Temporal Scales | Single | Multiple (L levels) |
-| Encoders | 1 encoder | L encoders (E^1, ..., E^L) |
-| Action Encoders | None | A^2, ..., A^L for levels > 1 |
-| Predictors | 1 predictor | L predictors |
-| Action Space | Raw actions only | Raw (level 1) + encoded (levels 2+) |
-| IDM Loss | Single IDM | IDM per level (especially important at level 1) |
-| Planning | Flat optimization | Top-down hierarchical |
-| Long-horizon | Limited by prediction error | Improved via abstraction |
+| Aspect          | AC-Video-JEPA               | H-AC-Video-JEPA                                 |
+| --------------- | --------------------------- | ----------------------------------------------- |
+| Temporal Scales | Single                      | Multiple (L levels)                             |
+| Encoders        | 1 encoder                   | L encoders (E^1, ..., E^L)                      |
+| Action Encoders | None                        | A^2, ..., A^L for levels > 1                    |
+| Predictors      | 1 predictor                 | L predictors                                    |
+| Action Space    | Raw actions only            | Raw (level 1) + encoded (levels 2+)             |
+| IDM Loss        | Single IDM                  | IDM per level (especially important at level 1) |
+| Planning        | Flat optimization           | Top-down hierarchical                           |
+| Long-horizon    | Limited by prediction error | Improved via abstraction                        |
 
 ## Files
 

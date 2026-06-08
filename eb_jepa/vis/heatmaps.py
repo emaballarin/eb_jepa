@@ -7,8 +7,11 @@ Supports ``two_rooms``, ``pusht``, and ``pointmaze`` environments.
 """
 
 import math
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -113,19 +116,14 @@ def _setup_env(env_name: str, device: torch.device):
     return env, bounds
 
 
-def _edge_goals(
-    env_name: str, bounds: dict, n: int = 4, device: torch.device = torch.device("cpu")
-) -> list:
+def _edge_goals(env_name: str, bounds: dict, n: int = 4, device: torch.device = torch.device("cpu")) -> list:
     """Return *n* goal positions in screen-aligned coordinates.
 
     For pointmaze, returns corners of the traversable U-maze cells.
     For other envs, distributes goals along the environment edges.
     """
     if env_name == "pointmaze":
-        return [
-            torch.tensor(pos, device=device, dtype=torch.float32)
-            for pos in _POINTMAZE_GOALS[:n]
-        ]
+        return [torch.tensor(pos, device=device, dtype=torch.float32) for pos in _POINTMAZE_GOALS[:n]]
 
     offset = _EDGE_OFFSETS[env_name]
     positions: list[torch.Tensor] = []
@@ -139,9 +137,7 @@ def _edge_goals(
         for i in range(max(1, n_slots)):
             if len(positions) >= n:
                 break
-            vary = bounds[lo_key] + (i + 1) * (bounds[hi_key] - bounds[lo_key]) / (
-                n_slots + 1
-            )
+            vary = bounds[lo_key] + (i + 1) * (bounds[hi_key] - bounds[lo_key]) / (n_slots + 1)
             pos = (
                 torch.tensor([fixed_val, vary], device=device)
                 if fixed_is_x
@@ -210,15 +206,9 @@ def compute_cost_grid(
     with torch.no_grad():
         for i in range(0, n_positions, batch_size):
             batch_pos = positions[i : i + batch_size]  # [B, 2] numpy
-            batch_pos_t = torch.tensor(
-                batch_pos, device=device, dtype=torch.float32
-            )  # [B, 2]
-            batch_obs = torch.stack(
-                [env.render_at_position(p) for p in batch_pos_t]
-            )  # [B, C, H, W]
-            batch_obs = normalize_fn(batch_obs.to(device)).unsqueeze(
-                2
-            )  # [B, C, 1, H, W]
+            batch_pos_t = torch.tensor(batch_pos, device=device, dtype=torch.float32)  # [B, 2]
+            batch_obs = torch.stack([env.render_at_position(p) for p in batch_pos_t])  # [B, C, H, W]
+            batch_obs = normalize_fn(batch_obs.to(device)).unsqueeze(2)  # [B, C, 1, H, W]
 
             if is_hierarchical and level is not None and level > 1:
                 all_encs = model.encode_hierarchical(batch_obs)
@@ -231,10 +221,7 @@ def compute_cost_grid(
     costs = np.concatenate(all_costs, axis=0)  # [N]
     cost_grid = costs.reshape(resolution, resolution)  # [res_y, res_x]
 
-    logger.info(
-        f"Cost grid computed. Min: {costs.min():.4f}, Max: {costs.max():.4f}, "
-        f"Mean: {costs.mean():.4f}"
-    )
+    logger.info(f"Cost grid computed. Min: {costs.min():.4f}, Max: {costs.max():.4f}, Mean: {costs.mean():.4f}")
 
     return x_grid, y_grid, cost_grid
 
@@ -270,9 +257,7 @@ def _collect_heatmap_data(
 
     for goal_pos in goal_positions:
         goal_obs = env.render_at_position(goal_pos)  # [C, H, W] float [0, 1]
-        goal_obs_norm = normalize_fn(goal_obs.unsqueeze(0).to(device)).unsqueeze(
-            2
-        )  # [1, C, 1, H, W]
+        goal_obs_norm = normalize_fn(goal_obs.unsqueeze(0).to(device)).unsqueeze(2)  # [1, C, 1, H, W]
 
         with torch.no_grad():
             if is_hierarchical:
@@ -281,9 +266,7 @@ def _collect_heatmap_data(
             else:
                 goal_enc = model.encode(goal_obs_norm)
 
-        objective = ReprDistObjective(
-            target_enc=goal_enc, distance="l2", sum_all_diffs=True
-        )
+        objective = ReprDistObjective(target_enc=goal_enc, distance="l2", sum_all_diffs=True)
         x_grid, y_grid, cost_grid = compute_cost_grid(
             model,
             objective,
@@ -293,14 +276,12 @@ def _collect_heatmap_data(
             normalize_fn=normalize_fn,
             level=level,
         )
-        heatmap_data.append(
-            {
-                "x_grid": x_grid,
-                "y_grid": y_grid,
-                "cost_grid": cost_grid,
-                "goal_position": goal_pos,
-            }
-        )
+        heatmap_data.append({
+            "x_grid": x_grid,
+            "y_grid": y_grid,
+            "cost_grid": cost_grid,
+            "goal_position": goal_pos,
+        })
 
     return heatmap_data
 
@@ -425,9 +406,7 @@ def visualize_heatmaps_grid(
 
         for idx, data in enumerate(heatmap_data):
             ax = axes[idx]
-            _render_single_heatmap(
-                ax, data, idx, wall_img_np=wall_img_np, origin=origin
-            )
+            _render_single_heatmap(ax, data, idx, wall_img_np=wall_img_np, origin=origin)
 
             if gradient:
                 x_grid, y_grid = data["x_grid"], data["y_grid"]
@@ -534,9 +513,7 @@ def generate_cost_heatmaps(
     wall_img = getattr(env, "wall_img", None)
 
     for level in range(1, num_levels + 1):
-        heatmap_data = _collect_heatmap_data(
-            model, env, bounds, goal_positions, level, normalize_fn
-        )
+        heatmap_data = _collect_heatmap_data(model, env, bounds, goal_positions, level, normalize_fn)
 
         desc = _level_desc(level, num_levels)
         if desc:

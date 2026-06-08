@@ -33,9 +33,7 @@ def return_bbox(img):
     import cv2
 
     thres = (img.min() + img.max()) / 2
-    contours, _ = cv2.findContours(
-        (img > thres).astype("uint8"), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, _ = cv2.findContours((img > thres).astype("uint8"), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     bounding_boxes = []
 
     # Loop through contours and extract bounding boxes
@@ -66,9 +64,7 @@ class MovingMNIST(Dataset):
         val_data, train_data = dataset[:1000], dataset[1000:]
         data = val_data if split == "val" else train_data
         # flatten sequences temporally by a factor of 2 to operate on shorter sequences with less memory
-        self.data = np.reshape(
-            data, [data.shape[0] * 2, data.shape[1] // 2, data.shape[2], data.shape[3]]
-        )
+        self.data = np.reshape(data, [data.shape[0] * 2, data.shape[1] // 2, data.shape[2], data.shape[3]])
 
     def __len__(self):
         return len(self.data)

@@ -1,6 +1,6 @@
-from __future__ import annotations
-
-from typing import List, Optional, Union
+from typing import List
+from typing import Optional
+from typing import Union
 
 import cv2
 import imageio
@@ -38,11 +38,7 @@ def to_uint8(frame: np.ndarray) -> np.ndarray:
 
 def to_hwc(frame: np.ndarray) -> np.ndarray:
     """Convert frame from (C, H, W) to (H, W, C) format if needed."""
-    if (
-        frame.ndim == 3
-        and frame.shape[0] in [1, 2, 3]
-        and frame.shape[0] < frame.shape[1]
-    ):
+    if frame.ndim == 3 and frame.shape[0] in [1, 2, 3] and frame.shape[0] < frame.shape[1]:
         return frame.transpose(1, 2, 0)
     return frame
 
@@ -70,9 +66,7 @@ def prepare_frame(frame: Union[torch.Tensor, np.ndarray, None]) -> Optional[np.n
     return frame
 
 
-def add_border(
-    frame: np.ndarray, color: tuple = (255, 0, 0), width: int = 2
-) -> np.ndarray:
+def add_border(frame: np.ndarray, color: tuple = (255, 0, 0), width: int = 2) -> np.ndarray:
     """Add a colored border around a frame."""
     bordered = frame.copy()
     bordered[:width, :] = color
@@ -99,9 +93,7 @@ def add_text_overlay(
         thickness = max(1, int(scale_factor))
     margin = int(h * 0.02)
 
-    (text_width, text_height), _ = cv2.getTextSize(
-        text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness
-    )
+    (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
 
     if position == "top_right":
         text_x = w - text_width - margin
@@ -158,9 +150,7 @@ def frames_to_list(frames) -> List[List[np.ndarray]]:
         if isinstance(first, (np.ndarray, torch.Tensor)):
             first_np = to_numpy(first) if isinstance(first, torch.Tensor) else first
             if first_np.ndim == 3:  # List of (H, W, C)
-                return [
-                    [to_numpy(f) if isinstance(f, torch.Tensor) else f for f in frames]
-                ]
+                return [[to_numpy(f) if isinstance(f, torch.Tensor) else f for f in frames]]
             elif first_np.ndim == 4:  # List of (T, H, W, C)
                 return [list(seq) for seq in frames]
             raise ValueError(f"Unsupported frame shape: {first_np.shape}")
@@ -171,9 +161,7 @@ def frames_to_list(frames) -> List[List[np.ndarray]]:
     raise ValueError(f"Unsupported frames type: {type(frames)}")
 
 
-def select_frame_indices(
-    total: int, num_frames: int = None, indices: List[int] = None
-) -> List[int]:
+def select_frame_indices(total: int, num_frames: int = None, indices: List[int] = None) -> List[int]:
     """Select evenly-spaced frame indices or use provided indices."""
     if indices is not None:
         return list(indices)
@@ -226,7 +214,7 @@ def save_gif(
             # Use larger font for better readability
             img_upscaled = add_text_overlay(
                 img_upscaled,
-                f"Frame {i+1}/{total_frames}",
+                f"Frame {i + 1}/{total_frames}",
                 "top_right",
                 font_scale=0.5,
                 thickness=2,
@@ -239,11 +227,7 @@ def save_gif(
 
     # Also save as PDF with horizontal unrolling (using matplotlib text overlay)
     pdf_path = save_path.replace(".gif", "_unroll.pdf")
-    frame_labels = (
-        [f"{i+1}/{total_frames}" for i in range(total_frames)]
-        if show_frame_numbers
-        else None
-    )
+    frame_labels = [f"{i + 1}/{total_frames}" for i in range(total_frames)] if show_frame_numbers else None
     save_gif_as_pdf_unroll(
         images_original,
         pdf_path,
@@ -306,9 +290,7 @@ def save_gif_as_pdf_unroll(
     num_rows = len(sequences)
     total_frames_per_seq = len(sequences[0])
 
-    selected_indices = select_frame_indices(
-        total_frames_per_seq, num_frames, frame_indices
-    )
+    selected_indices = select_frame_indices(total_frames_per_seq, num_frames, frame_indices)
 
     # Prepare init/goal frames
     init_prepared = prepare_frame(init_frame)
@@ -330,9 +312,7 @@ def save_gif_as_pdf_unroll(
     if title:
         fig_height += 0.3
 
-    fig, axes = plt.subplots(
-        num_rows, num_cols, figsize=(fig_width, fig_height), dpi=dpi, squeeze=False
-    )
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(fig_width, fig_height), dpi=dpi, squeeze=False)
     plt.subplots_adjust(wspace=0, hspace=0, left=0, right=1, bottom=0, top=1)
 
     for row_idx, sequence in enumerate(sequences):
@@ -449,9 +429,7 @@ def show_images(
     ncol = min(nrow, batch_size)
     nrow_actual = (batch_size + ncol - 1) // ncol
 
-    fig, axes = plt.subplots(
-        nrow_actual, ncol, figsize=(ncol * 2, nrow_actual * 2), dpi=dpi
-    )
+    fig, axes = plt.subplots(nrow_actual, ncol, figsize=(ncol * 2, nrow_actual * 2), dpi=dpi)
     if nrow_actual == 1 and ncol == 1:
         axes = [[axes]]
 
@@ -522,7 +500,7 @@ def save_decoded_frames(
                     )
                 add_text_overlay(
                     frame_copy,
-                    f"Iter {i+1}",
+                    f"Iter {i + 1}",
                     "top_left",
                     (200, 200, 200),
                     font_scale=0.7,

@@ -1,23 +1,17 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-
 # Copyright 2020 Ross Wightman
-
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
 #     http://www.apache.org/licenses/LICENSE-2.0
-
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 # This implementation is based on
 # https://github.com/rwightman/pytorch-image-models/blob/master/timm/data/random_erasing.py
 # published under an Apache License 2.0.
-
 """
 This implementation is based on
 https://github.com/rwightman/pytorch-image-models/blob/master/timm/data/random_erasing.py
@@ -99,16 +93,10 @@ class RandomErasing:
         if random.random() > self.probability:
             return
         area = img_h * img_w
-        count = (
-            self.min_count
-            if self.min_count == self.max_count
-            else random.randint(self.min_count, self.max_count)
-        )
+        count = self.min_count if self.min_count == self.max_count else random.randint(self.min_count, self.max_count)
         for _ in range(count):
             for _ in range(10):
-                target_area = (
-                    random.uniform(self.min_area, self.max_area) * area / count
-                )
+                target_area = random.uniform(self.min_area, self.max_area) * area / count
                 aspect_ratio = math.exp(random.uniform(*self.log_aspect_ratio))
                 h = int(round(math.sqrt(target_area * aspect_ratio)))
                 w = int(round(math.sqrt(target_area / aspect_ratio)))
@@ -137,16 +125,10 @@ class RandomErasing:
         if random.random() > self.probability:
             return
         area = img_h * img_w
-        count = (
-            self.min_count
-            if self.min_count == self.max_count
-            else random.randint(self.min_count, self.max_count)
-        )
+        count = self.min_count if self.min_count == self.max_count else random.randint(self.min_count, self.max_count)
         for _ in range(count):
             for _ in range(100):
-                target_area = (
-                    random.uniform(self.min_area, self.max_area) * area / count
-                )
+                target_area = random.uniform(self.min_area, self.max_area) * area / count
                 aspect_ratio = math.exp(random.uniform(*self.log_aspect_ratio))
                 h = int(round(math.sqrt(target_area * aspect_ratio)))
                 w = int(round(math.sqrt(target_area / aspect_ratio)))

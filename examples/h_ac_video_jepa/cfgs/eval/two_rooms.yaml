@@ -1,8 +1,8 @@
 meta:
-  num_eval_episodes: 20
-  plan_suffix: _hierarchical
+    num_eval_episodes: 20
+    plan_suffix: _hierarchical
 env:
-  n_allowed_steps: 200
-  level: normal
+    n_allowed_steps: 200
+    level: normal
 data:
-  env_name: two_rooms
+    env_name: two_rooms

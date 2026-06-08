@@ -13,12 +13,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eb_jepa.losses.anticollapse import (
-    CovarianceLoss,
-    HingeStdLoss,
-    VCLoss,
-    VICRegLoss,
-)
+from eb_jepa.losses.anticollapse import CovarianceLoss
+from eb_jepa.losses.anticollapse import HingeStdLoss
+from eb_jepa.losses.anticollapse import VCLoss
+from eb_jepa.losses.anticollapse import VICRegLoss
 
 
 class TestStdLossEquivalence:
@@ -52,8 +50,7 @@ class TestStdLossEquivalence:
         # 1. torch.var() computes variance around the mean anyway
         # 2. 1e-4 == 0.0001
         assert torch.allclose(std_loss_vicreg, std_loss_hinge, atol=1e-7), (
-            f"VICReg std: {std_loss_vicreg.item():.8f} vs "
-            f"HingeStd: {std_loss_hinge.item():.8f}"
+            f"VICReg std: {std_loss_vicreg.item():.8f} vs HingeStd: {std_loss_hinge.item():.8f}"
         )
 
     def test_centering_before_var_is_redundant(self, sample_data):
@@ -95,17 +92,14 @@ class TestCovLossEquivalence:
         # VICRegLoss style computation
         z_centered = x - x.mean(dim=0)
         z_cov = torch.mm(z_centered.T, z_centered) / (batch_size - 1)
-        cov_loss_vicreg = (z_cov.pow(2).sum() - z_cov.diagonal().pow(2).sum()) / (
-            z_cov.size(0) ** 2 - z_cov.size(0)
-        )
+        cov_loss_vicreg = (z_cov.pow(2).sum() - z_cov.diagonal().pow(2).sum()) / (z_cov.size(0) ** 2 - z_cov.size(0))
 
         # CovarianceLoss style
         cov_loss_fn = CovarianceLoss()
         cov_loss_class = cov_loss_fn(x)
 
         assert torch.allclose(cov_loss_vicreg, cov_loss_class, atol=1e-6), (
-            f"VICReg cov: {cov_loss_vicreg.item():.8f} vs "
-            f"CovarianceLoss: {cov_loss_class.item():.8f}"
+            f"VICReg cov: {cov_loss_vicreg.item():.8f} vs CovarianceLoss: {cov_loss_class.item():.8f}"
         )
 
 
@@ -145,18 +139,18 @@ class TestFullLossEquivalence:
         expected_total = sim_loss + std_coeff * std_loss + cov_coeff * cov_loss
 
         # Compare
-        assert torch.allclose(
-            result["invariance_loss"], sim_loss, atol=1e-6
-        ), f"Sim loss: {result['invariance_loss'].item():.8f} vs {sim_loss.item():.8f}"
-        assert torch.allclose(
-            result["var_loss"], std_loss, atol=1e-6
-        ), f"Var loss: {result['var_loss'].item():.8f} vs {std_loss.item():.8f}"
-        assert torch.allclose(
-            result["cov_loss"], cov_loss, atol=1e-6
-        ), f"Cov loss: {result['cov_loss'].item():.8f} vs {cov_loss.item():.8f}"
-        assert torch.allclose(
-            result["loss"], expected_total, atol=1e-6
-        ), f"Total loss: {result['loss'].item():.8f} vs {expected_total.item():.8f}"
+        assert torch.allclose(result["invariance_loss"], sim_loss, atol=1e-6), (
+            f"Sim loss: {result['invariance_loss'].item():.8f} vs {sim_loss.item():.8f}"
+        )
+        assert torch.allclose(result["var_loss"], std_loss, atol=1e-6), (
+            f"Var loss: {result['var_loss'].item():.8f} vs {std_loss.item():.8f}"
+        )
+        assert torch.allclose(result["cov_loss"], cov_loss, atol=1e-6), (
+            f"Cov loss: {result['cov_loss'].item():.8f} vs {cov_loss.item():.8f}"
+        )
+        assert torch.allclose(result["loss"], expected_total, atol=1e-6), (
+            f"Total loss: {result['loss'].item():.8f} vs {expected_total.item():.8f}"
+        )
 
 
 class TestVCLoss:
@@ -218,9 +212,7 @@ class TestVCLoss:
         loss, unweighted, loss_dict = vc_loss(x_5d)
 
         # Verify that weighted loss equals coefficient-weighted components
-        expected_loss = (
-            std_coeff * loss_dict["std_loss"] + cov_coeff * loss_dict["cov_loss"]
-        )
+        expected_loss = std_coeff * loss_dict["std_loss"] + cov_coeff * loss_dict["cov_loss"]
         assert torch.allclose(loss, torch.tensor(expected_loss), atol=1e-5), (
             f"Weighted loss {loss.item():.6f} should equal "
             f"{std_coeff}*{loss_dict['std_loss']:.6f} + {cov_coeff}*{loss_dict['cov_loss']:.6f} = {expected_loss:.6f}"
@@ -244,9 +236,9 @@ class TestVCLoss:
             vc_loss = VCLoss(std_coeff=std_coeff, cov_coeff=cov_coeff)
             loss2, _, _ = vc_loss(x_5d)
 
-            assert torch.allclose(
-                loss1, loss2, atol=1e-7
-            ), f"Seed {seed}: loss should be deterministic, got {loss1.item():.6f} vs {loss2.item():.6f}"
+            assert torch.allclose(loss1, loss2, atol=1e-7), (
+                f"Seed {seed}: loss should be deterministic, got {loss1.item():.6f} vs {loss2.item():.6f}"
+            )
 
 
 class TestVICRegLossRegression:
@@ -289,30 +281,22 @@ class TestVICRegLossRegression:
         z2_cov = torch.mm(z2_centered.T, z2_centered) / (batch_size - 1)
         cov_loss_orig = (z1_cov.pow(2).sum() - z1_cov.diagonal().pow(2).sum()) / (
             z1_cov.size(0) ** 2 - z1_cov.size(0)
-        ) + (z2_cov.pow(2).sum() - z2_cov.diagonal().pow(2).sum()) / (
-            z2_cov.size(0) ** 2 - z2_cov.size(0)
-        )
+        ) + (z2_cov.pow(2).sum() - z2_cov.diagonal().pow(2).sum()) / (z2_cov.size(0) ** 2 - z2_cov.size(0))
 
-        total_loss_orig = (
-            sim_loss_orig + std_coeff * var_loss_orig + cov_coeff * cov_loss_orig
-        )
+        total_loss_orig = sim_loss_orig + std_coeff * var_loss_orig + cov_coeff * cov_loss_orig
 
         # Verify all components match
         assert torch.allclose(result["invariance_loss"], sim_loss_orig, atol=1e-6), (
-            f"Refactored sim: {result['invariance_loss'].item():.8f} vs "
-            f"Original sim: {sim_loss_orig.item():.8f}"
+            f"Refactored sim: {result['invariance_loss'].item():.8f} vs Original sim: {sim_loss_orig.item():.8f}"
         )
         assert torch.allclose(result["var_loss"], var_loss_orig, atol=1e-6), (
-            f"Refactored var: {result['var_loss'].item():.8f} vs "
-            f"Original var: {var_loss_orig.item():.8f}"
+            f"Refactored var: {result['var_loss'].item():.8f} vs Original var: {var_loss_orig.item():.8f}"
         )
         assert torch.allclose(result["cov_loss"], cov_loss_orig, atol=1e-6), (
-            f"Refactored cov: {result['cov_loss'].item():.8f} vs "
-            f"Original cov: {cov_loss_orig.item():.8f}"
+            f"Refactored cov: {result['cov_loss'].item():.8f} vs Original cov: {cov_loss_orig.item():.8f}"
         )
         assert torch.allclose(result["loss"], total_loss_orig, atol=1e-6), (
-            f"Refactored total: {result['loss'].item():.8f} vs "
-            f"Original total: {total_loss_orig.item():.8f}"
+            f"Refactored total: {result['loss'].item():.8f} vs Original total: {total_loss_orig.item():.8f}"
         )
 
 

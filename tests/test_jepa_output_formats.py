@@ -19,13 +19,11 @@ from eb_jepa.jepa import JEPA
 from eb_jepa.losses.anticollapse import VCLoss
 from eb_jepa.losses.prediction import SquareLossSeq
 from eb_jepa.losses.regularizers import VC_IDM_Sim_Regularizer
-from eb_jepa.models.components import (
-    InverseDynamicsModel,
-    Projector,
-    ResNet5,
-    ResUNet,
-    StateOnlyPredictor,
-)
+from eb_jepa.models.components import InverseDynamicsModel
+from eb_jepa.models.components import Projector
+from eb_jepa.models.components import ResNet5
+from eb_jepa.models.components import ResUNet
+from eb_jepa.models.components import StateOnlyPredictor
 from eb_jepa.models.encoders import ImpalaEncoder
 from eb_jepa.models.predictors import RNNPredictor
 
@@ -51,7 +49,7 @@ def create_video_jepa_model(device="cpu"):
     encoder = ResNet5(dobs, henc, dstc)
     predictor_model = ResUNet(2 * dstc, hpre, dstc)
     predictor = StateOnlyPredictor(predictor_model, context_length=2)
-    projector = Projector(f"{dstc}-{dstc*4}-{dstc*4}")
+    projector = Projector(f"{dstc}-{dstc * 4}-{dstc * 4}")
     regularizer = VCLoss(std_coeff=10.0, cov_coeff=100.0, proj=projector)
     ploss = SquareLossSeq(projector)
     jepa = JEPA(encoder, encoder, predictor, regularizer, ploss).to(device)
@@ -112,9 +110,7 @@ def create_ac_video_jepa_model(device="cpu", img_size=65):
 
     # Projector (only if use_proj=True in config)
     if use_proj:
-        projector = Projector(
-            f"{encoder.mlp_output_dim}-{encoder.mlp_output_dim*4}-{encoder.mlp_output_dim*4}"
-        )
+        projector = Projector(f"{encoder.mlp_output_dim}-{encoder.mlp_output_dim * 4}-{encoder.mlp_output_dim * 4}")
     else:
         projector = None
 
@@ -198,9 +194,7 @@ def test_unroll_parallel_mode_output_format():
     # Call unroll with return_all_steps=True (like former infern())
     nsteps = T - 2
     print(f"\nCalling: jepa.unroll(x, actions=None, nsteps={nsteps}, ...")
-    print(
-        f"         unroll_mode='parallel', compute_loss=False, return_all_steps=True)"
-    )
+    print(f"         unroll_mode='parallel', compute_loss=False, return_all_steps=True)")
 
     with torch.no_grad():
         preds, _, losses = jepa.unroll(
@@ -230,7 +224,7 @@ def test_unroll_parallel_mode_output_format():
     print(f"  Dimension 0 (batch): {first_pred.shape[0]} (expected: {B})")
     print(f"  Dimension 1 (embedding dim): {first_pred.shape[1]} (expected: {dstc})")
     print(
-        f"  Dimension 2 (time): {first_pred.shape[2]} (expected: T-context_length = {T}-{context_length} = {T-context_length})"
+        f"  Dimension 2 (time): {first_pred.shape[2]} (expected: T-context_length = {T}-{context_length} = {T - context_length})"
     )
     print(f"  Dimension 3 (height): {first_pred.shape[3]}")
     print(f"  Dimension 4 (width): {first_pred.shape[4]}")
@@ -276,21 +270,15 @@ def test_unroll_parallel_mode_with_loss():
     print(f"\nCalling: jepa.unroll(x, actions=None, nsteps={nsteps}, ...")
     print(f"         unroll_mode='parallel', compute_loss=True)")
 
-    predicted_states, _, losses = jepa.unroll(
-        x, actions=None, nsteps=nsteps, unroll_mode="parallel", compute_loss=True
-    )
+    predicted_states, _, losses = jepa.unroll(x, actions=None, nsteps=nsteps, unroll_mode="parallel", compute_loss=True)
     loss, rloss, rloss_unweight, rloss_dict, ploss = losses
 
     print(f"\n--- unroll() Output Analysis ---")
     print(f"Output is a tuple of (predicted_states, losses):")
     print(f"  predicted_states shape: {predicted_states.shape}")
     print(f"\nlosses tuple contains 5 elements:")
-    print(
-        f"  1. total_loss (loss):      {type(loss).__name__}, shape: {loss.shape}, value: {loss.item():.6f}"
-    )
-    print(
-        f"  2. reg_loss (rloss):       {type(rloss).__name__}, shape: {rloss.shape}, value: {rloss.item():.6f}"
-    )
+    print(f"  1. total_loss (loss):      {type(loss).__name__}, shape: {loss.shape}, value: {loss.item():.6f}")
+    print(f"  2. reg_loss (rloss):       {type(rloss).__name__}, shape: {rloss.shape}, value: {rloss.item():.6f}")
     print(
         f"  3. reg_loss_unweighted:    {type(rloss_unweight).__name__}, shape: {rloss_unweight.shape}, value: {rloss_unweight.item():.6f}"
     )
@@ -300,20 +288,12 @@ def test_unroll_parallel_mode_with_loss():
             print(f"       - '{k}': {v.item():.6f}")
         else:
             print(f"       - '{k}': {v}")
-    print(
-        f"  5. pred_loss (ploss):      {type(ploss).__name__}, shape: {ploss.shape}, value: {ploss.item():.6f}"
-    )
+    print(f"  5. pred_loss (ploss):      {type(ploss).__name__}, shape: {ploss.shape}, value: {ploss.item():.6f}")
 
     # Assertions
-    assert loss.shape == torch.Size(
-        []
-    ), f"total_loss should be scalar, got {loss.shape}"
-    assert rloss.shape == torch.Size(
-        []
-    ), f"reg_loss should be scalar, got {rloss.shape}"
-    assert ploss.shape == torch.Size(
-        []
-    ), f"pred_loss should be scalar, got {ploss.shape}"
+    assert loss.shape == torch.Size([]), f"total_loss should be scalar, got {loss.shape}"
+    assert rloss.shape == torch.Size([]), f"reg_loss should be scalar, got {rloss.shape}"
+    assert ploss.shape == torch.Size([]), f"pred_loss should be scalar, got {ploss.shape}"
     print("\n  ✓ All assertions passed!")
 
     print("=" * 60)
@@ -403,9 +383,7 @@ def test_unroll_autoregressive_mode_shapes():
     print(f"  nsteps:    {nsteps}")
 
     print(f"\nCalling: jepa.unroll(obs_init, actions, nsteps={nsteps}, ...")
-    print(
-        f"         unroll_mode='autoregressive', ctxt_window_time=1, compute_loss=False)"
-    )
+    print(f"         unroll_mode='autoregressive', ctxt_window_time=1, compute_loss=False)")
 
     with torch.no_grad():
         predicted_states, _, losses = jepa.unroll(
@@ -427,19 +405,15 @@ def test_unroll_autoregressive_mode_shapes():
     expected_shape = (B, D, expected_T_out, 1, 1)
 
     print(f"\n--- Shape Assertions ---")
-    assert (
-        predicted_states.shape[0] == B
-    ), f"Batch dim mismatch: {predicted_states.shape[0]} vs {B}"
+    assert predicted_states.shape[0] == B, f"Batch dim mismatch: {predicted_states.shape[0]} vs {B}"
     print(f"  ✓ Batch dimension: {B}")
 
-    assert (
-        predicted_states.shape[1] == D
-    ), f"Feature dim mismatch: {predicted_states.shape[1]} vs {D}"
+    assert predicted_states.shape[1] == D, f"Feature dim mismatch: {predicted_states.shape[1]} vs {D}"
     print(f"  ✓ Feature dimension: {D}")
 
-    assert (
-        predicted_states.shape[2] == expected_T_out
-    ), f"Time dim mismatch: {predicted_states.shape[2]} vs {expected_T_out}"
+    assert predicted_states.shape[2] == expected_T_out, (
+        f"Time dim mismatch: {predicted_states.shape[2]} vs {expected_T_out}"
+    )
     print(f"  ✓ Time dimension: {expected_T_out} (1 + nsteps={nsteps})")
 
     assert losses is None, f"Expected losses=None, got {losses}"
@@ -455,15 +429,13 @@ def test_unroll_autoregressive_mode_shapes():
         encoded_init = jepa.encoder(obs_init)  # [B, D, T_context, 1, 1]
 
     print(f"  Encoded initial obs shape: {encoded_init.shape}")
-    print(
-        f"  First timestep of unroll output shape: {predicted_states[:, :, :T_context].shape}"
-    )
+    print(f"  First timestep of unroll output shape: {predicted_states[:, :, :T_context].shape}")
 
     # The first timestep(s) should match the encoded initial observation
     first_timesteps = predicted_states[:, :, :T_context]
-    assert torch.allclose(
-        first_timesteps, encoded_init, atol=1e-5
-    ), "First timestep(s) of unroll should match encoded initial observation"
+    assert torch.allclose(first_timesteps, encoded_init, atol=1e-5), (
+        "First timestep(s) of unroll should match encoded initial observation"
+    )
     print(f"  ✓ First timestep matches encoded initial observation")
 
     # Test case 3: Verify error when nsteps > action sequence length
@@ -493,9 +465,7 @@ def test_unroll_autoregressive_mode_shapes():
     print(f"  Input observations: [B, C, T_context, H, W]")
     print(f"  Input actions:      [B, A, T_actions] where T_actions >= nsteps")
     print(f"  Output:             [B, D, 1 + nsteps, H', W'] for RNN predictor")
-    print(
-        f"                      (only first frame of context is used as initial state)"
-    )
+    print(f"                      (only first frame of context is used as initial state)")
     print(f"  Where:")
     print(f"    - B = batch size")
     print(f"    - D = encoder output dim ({D})")
@@ -529,9 +499,7 @@ def test_unroll_autoregressive_with_loss():
     jepa.train()
 
     # Verify this is an RNN predictor
-    assert (
-        jepa.single_unroll
-    ), "AC Video JEPA should have single_unroll=True (RNN predictor)"
+    assert jepa.single_unroll, "AC Video JEPA should have single_unroll=True (RNN predictor)"
     print("  ✓ Confirmed RNN predictor (single_unroll=True)")
 
     # Create test input
@@ -551,9 +519,7 @@ def test_unroll_autoregressive_with_loss():
 
     # Call unroll with compute_loss=True
     print(f"\nCalling: jepa.unroll(x, actions, nsteps={nsteps}, ...")
-    print(
-        f"         unroll_mode='autoregressive', ctxt_window_time=1, compute_loss=True)"
-    )
+    print(f"         unroll_mode='autoregressive', ctxt_window_time=1, compute_loss=True)")
 
     predicted_states, _, losses = jepa.unroll(
         x,
@@ -570,28 +536,18 @@ def test_unroll_autoregressive_with_loss():
     print(f"\nlosses tuple contains 5 elements:")
     print(f"  1. total_loss:         shape={loss.shape}, dtype={loss.dtype}")
     print(f"  2. reg_loss:           shape={rloss.shape}, dtype={rloss.dtype}")
-    print(
-        f"  3. reg_loss_unweight:  shape={rloss_unweight.shape}, dtype={rloss_unweight.dtype}"
-    )
+    print(f"  3. reg_loss_unweight:  shape={rloss_unweight.shape}, dtype={rloss_unweight.dtype}")
     print(f"  4. reg_loss_dict:      keys={list(rloss_dict.keys())}")
     print(f"  5. pred_loss:          shape={ploss.shape}, dtype={ploss.dtype}")
 
     # Assertions
-    assert loss.shape == torch.Size(
-        []
-    ), f"total_loss should be scalar, got {loss.shape}"
-    assert rloss.shape == torch.Size(
-        []
-    ), f"reg_loss should be scalar, got {rloss.shape}"
-    assert ploss.shape == torch.Size(
-        []
-    ), f"pred_loss should be scalar, got {ploss.shape}"
+    assert loss.shape == torch.Size([]), f"total_loss should be scalar, got {loss.shape}"
+    assert rloss.shape == torch.Size([]), f"reg_loss should be scalar, got {rloss.shape}"
+    assert ploss.shape == torch.Size([]), f"pred_loss should be scalar, got {ploss.shape}"
 
     # reg_loss_dict should contain expected keys for VC_IDM_Sim_Regularizer
     expected_keys = {"std_loss", "cov_loss", "sim_loss_t", "idm_loss"}
-    assert (
-        set(rloss_dict.keys()) == expected_keys
-    ), f"Expected keys {expected_keys}, got {set(rloss_dict.keys())}"
+    assert set(rloss_dict.keys()) == expected_keys, f"Expected keys {expected_keys}, got {set(rloss_dict.keys())}"
     print(f"\n  ✓ reg_loss_dict contains expected keys: {expected_keys}")
     print("  ✓ All assertions passed!")
 
@@ -619,9 +575,7 @@ def test_unroll_autoregressive_with_conv_predictor():
     jepa.eval()
 
     # Verify this is NOT an RNN predictor
-    assert (
-        not jepa.single_unroll
-    ), "Video JEPA should have single_unroll=False (Conv predictor)"
+    assert not jepa.single_unroll, "Video JEPA should have single_unroll=False (Conv predictor)"
     print("  ✓ Confirmed Conv predictor (single_unroll=False)")
 
     # Create test input
@@ -637,9 +591,7 @@ def test_unroll_autoregressive_with_conv_predictor():
     print(f"ctxt_window_time: {ctxt_window_time}")
 
     print(f"\nCalling: jepa.unroll(obs, actions=None, nsteps={nsteps}, ...")
-    print(
-        f"         unroll_mode='autoregressive', ctxt_window_time={ctxt_window_time})"
-    )
+    print(f"         unroll_mode='autoregressive', ctxt_window_time={ctxt_window_time})")
 
     with torch.no_grad():
         unroll_result, _, unroll_losses = jepa.unroll(
@@ -656,9 +608,9 @@ def test_unroll_autoregressive_with_conv_predictor():
     print(f"\n  Output shape: {unroll_result.shape}")
     print(f"  Expected time dimension: {expected_T_out} (ctxt_window_time + nsteps)")
 
-    assert (
-        unroll_result.shape[2] == expected_T_out
-    ), f"Time dim mismatch: got {unroll_result.shape[2]}, expected {expected_T_out}"
+    assert unroll_result.shape[2] == expected_T_out, (
+        f"Time dim mismatch: got {unroll_result.shape[2]}, expected {expected_T_out}"
+    )
     print(f"  ✓ Time dimension correct: {unroll_result.shape[2]}")
 
     print("\n" + "=" * 60)
@@ -730,18 +682,16 @@ def test_unroll_return_all_steps_format():
         )
 
     assert isinstance(all_steps_ac, list), f"Expected list, got {type(all_steps_ac)}"
-    assert (
-        len(all_steps_ac) == nsteps
-    ), f"Expected {nsteps} steps, got {len(all_steps_ac)}"
+    assert len(all_steps_ac) == nsteps, f"Expected {nsteps} steps, got {len(all_steps_ac)}"
     print(f"  ✓ Autoregressive mode returns list of {len(all_steps_ac)} tensors")
     for i, step in enumerate(all_steps_ac):
         print(f"    Step {i}: shape={step.shape}")
 
     # Verify autoregressive steps grow in time dimension
     for i in range(1, len(all_steps_ac)):
-        assert (
-            all_steps_ac[i].shape[2] == all_steps_ac[i - 1].shape[2] + 1
-        ), f"Autoregressive steps should grow by 1: step {i-1}={all_steps_ac[i-1].shape[2]}, step {i}={all_steps_ac[i].shape[2]}"
+        assert all_steps_ac[i].shape[2] == all_steps_ac[i - 1].shape[2] + 1, (
+            f"Autoregressive steps should grow by 1: step {i - 1}={all_steps_ac[i - 1].shape[2]}, step {i}={all_steps_ac[i].shape[2]}"
+        )
     print("  ✓ Autoregressive steps correctly grow in time dimension")
 
     print("\n" + "=" * 60)

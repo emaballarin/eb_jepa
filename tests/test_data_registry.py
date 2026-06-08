@@ -9,7 +9,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from eb_jepa.data import DATA_STATS, get_data_dims, get_data_stats
+from eb_jepa.data import DATA_STATS
+from eb_jepa.data import get_data_dims
+from eb_jepa.data import get_data_stats
 
 EXPECTED_ENVS = ["two_rooms", "pusht", "pointmaze", "droid", "robocasa"]
 
@@ -120,9 +122,9 @@ class TestConfigFiles:
         cfg_path = DATASETS_DIR / "cfgs" / f"{env}.yaml"
         with open(cfg_path) as f:
             cfg = yaml.safe_load(f)
-        assert (
-            cfg["action_dim"] == DATA_STATS[env]["action_dim"]
-        ), f"{env}: cfg action_dim={cfg['action_dim']} != registry {DATA_STATS[env]['action_dim']}"
+        assert cfg["action_dim"] == DATA_STATS[env]["action_dim"], (
+            f"{env}: cfg action_dim={cfg['action_dim']} != registry {DATA_STATS[env]['action_dim']}"
+        )
 
 
 # ---------------------------------------------------------------------------

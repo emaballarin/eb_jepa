@@ -1,25 +1,25 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # All rights reserved.
-
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import gymnasium as gym
 import numpy as np
 import torch
 
 from eb_jepa.data.preprocessor import Preprocessor
-from eb_jepa.data.two_rooms_dset import (
-    TWO_ROOMS_LOCATION_MEAN,
-    TWO_ROOMS_LOCATION_STD,
-    TWO_ROOMS_STATE_MEAN,
-    TWO_ROOMS_STATE_STD,
-    WallDatasetConfig,
-    _normalize_two_rooms_obs,
-    _unnormalize_two_rooms_obs,
-    check_wall_intersect,
-    generate_wall_layouts,
-)
+from eb_jepa.data.two_rooms_dset import _normalize_two_rooms_obs
+from eb_jepa.data.two_rooms_dset import _unnormalize_two_rooms_obs
+from eb_jepa.data.two_rooms_dset import check_wall_intersect
+from eb_jepa.data.two_rooms_dset import generate_wall_layouts
+from eb_jepa.data.two_rooms_dset import TWO_ROOMS_LOCATION_MEAN
+from eb_jepa.data.two_rooms_dset import TWO_ROOMS_LOCATION_STD
+from eb_jepa.data.two_rooms_dset import TWO_ROOMS_STATE_MEAN
+from eb_jepa.data.two_rooms_dset import TWO_ROOMS_STATE_STD
+from eb_jepa.data.two_rooms_dset import WallDatasetConfig
 
 InfoType = Dict[str, Any]
 ObsType = torch.Tensor
@@ -64,9 +64,7 @@ class DotWall(gym.Env):
         self.n_steps = n_steps
         self.rng = rng or np.random.default_rng(0)
 
-        self.action_space = gym.spaces.Box(
-            low=-max_step_norm, high=max_step_norm, shape=(2,), dtype=np.float32
-        )
+        self.action_space = gym.spaces.Box(low=-max_step_norm, high=max_step_norm, shape=(2,), dtype=np.float32)
         self.observation_space = gym.spaces.Box(
             low=0.0,
             high=1.0,
@@ -228,12 +226,8 @@ class DotWall(gym.Env):
             sampled_code = self.rng.choice(layout_codes)
             layout = layouts[sampled_code]
 
-            wall_loc = torch.tensor(
-                layout["wall_pos"], device=self.device, dtype=torch.float32
-            )
-            door_loc = torch.tensor(
-                layout["door_pos"], device=self.device, dtype=torch.float32
-            )
+            wall_loc = torch.tensor(layout["wall_pos"], device=self.device, dtype=torch.float32)
+            door_loc = torch.tensor(layout["door_pos"], device=self.device, dtype=torch.float32)
 
         return wall_loc, door_loc
 
@@ -243,9 +237,8 @@ class DotWall(gym.Env):
             if self.level == "easy":
                 avg_dist_n_steps = n_steps * self.action_step_mean
 
-                assert (
-                    self.wall_padding - self.wall_width // 2 - self.border_wall_loc
-                    >= math.ceil(avg_dist_n_steps * 3 / 4)
+                assert self.wall_padding - self.wall_width // 2 - self.border_wall_loc >= math.ceil(
+                    avg_dist_n_steps * 3 / 4
                 )
 
                 start_min_x = self.left_wall_x - math.ceil(avg_dist_n_steps * 3 / 4)
@@ -273,12 +266,8 @@ class DotWall(gym.Env):
             start_x = start_min_x + self.rng.random() * (start_max_x - start_min_x)
             target_x = target_min_x + self.rng.random() * (target_max_x - target_min_x)
 
-            start_y = torch.tensor(
-                min_y + self.rng.random() * (max_y - min_y), device=self.device
-            )
-            target_y = torch.tensor(
-                min_y + self.rng.random() * (max_y - min_y), device=self.device
-            )
+            start_y = torch.tensor(min_y + self.rng.random() * (max_y - min_y), device=self.device)
+            target_y = torch.tensor(min_y + self.rng.random() * (max_y - min_y), device=self.device)
 
             if self.rng.random() < 0.5:
                 start_x, target_x = target_x, start_x
@@ -295,13 +284,9 @@ class DotWall(gym.Env):
 
         half_width = self.wall_width // 2
 
-        wall_mask = (grid_x >= (wall_loc - half_width)) & (
-            grid_x <= (wall_loc + half_width)
-        )
+        wall_mask = (grid_x >= (wall_loc - half_width)) & (grid_x <= (wall_loc + half_width))
 
-        door_mask = (hole_loc - self.door_space <= grid_y) & (
-            grid_y <= hole_loc + self.door_space
-        )
+        door_mask = (hole_loc - self.door_space <= grid_y) & (grid_y <= hole_loc + self.door_space)
 
         res = wall_mask & ~door_mask
         res = res.float()
@@ -328,12 +313,8 @@ class DotWall(gym.Env):
             - If location is [2,]: Tensor of shape [img_size, img_size]
             - If location is [t, 2]: Tensor of shape [t, img_size, img_size]
         """
-        x = torch.linspace(
-            0, self.img_size - 1, steps=self.img_size, device=self.device
-        )
-        y = torch.linspace(
-            0, self.img_size - 1, steps=self.img_size, device=self.device
-        )
+        x = torch.linspace(0, self.img_size - 1, steps=self.img_size, device=self.device)
+        y = torch.linspace(0, self.img_size - 1, steps=self.img_size, device=self.device)
         xx, yy = torch.meshgrid(x, y, indexing="xy")
         c = torch.stack([xx, yy], dim=-1)  # [img_size, img_size, 2]
 
@@ -347,13 +328,7 @@ class DotWall(gym.Env):
             location = location.unsqueeze(0).unsqueeze(0)  # [1, 1, 2]
 
         img = (
-            (
-                torch.exp(
-                    -(c - location).norm(dim=-1).pow(2)
-                    / (2 * self.dot_std * self.dot_std)
-                )
-                * 255.0
-            )
+            (torch.exp(-(c - location).norm(dim=-1).pow(2) / (2 * self.dot_std * self.dot_std)) * 255.0)
             .clamp(0, 255)
             .to(torch.uint8)
         )
@@ -384,9 +359,7 @@ class DotWall(gym.Env):
         """
         return self._render_dot_and_wall_target(pos).float() / 255.0
 
-    def coord_to_pixel(
-        self, locations: torch.Tensor, wall_x=None, door_y=None
-    ) -> torch.Tensor:
+    def coord_to_pixel(self, locations: torch.Tensor, wall_x=None, door_y=None) -> torch.Tensor:
         """Render images with the walls and dots at the specified locations
         without modifying the env state.
 
@@ -417,13 +390,9 @@ class DotWall(gym.Env):
 
             dot_imgs = self._render_dot(locations[i])  # [t, img_size, img_size]
 
-            wall_imgs = curr_wall_img.unsqueeze(0).expand(
-                t, -1, -1
-            )  # [t, img_size, img_size]
+            wall_imgs = curr_wall_img.unsqueeze(0).expand(t, -1, -1)  # [t, img_size, img_size]
 
-            obs = torch.stack(
-                [dot_imgs, wall_imgs], dim=1
-            )  # [t, 2, img_size, img_size]
+            obs = torch.stack([dot_imgs, wall_imgs], dim=1)  # [t, 2, img_size, img_size]
             output.append(obs)
 
         batched_output = torch.stack(output, dim=0)

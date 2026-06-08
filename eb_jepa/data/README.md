@@ -4,13 +4,13 @@ This directory contains dataset implementations for training action-conditioned 
 
 ## Available Datasets
 
-| Dataset | Module | Domain | Observations | Actions | State |
-|---------|--------|--------|-------------|---------|-------|
-| **Two Rooms** | `two_rooms_dset.py` | 2D navigation | 65×65 RGB | 2D velocity | 2D position |
-| **DROID** | `droid_dset.py` | Real robot manipulation | Multi-view RGB video | 7-DoF delta poses | 7-DoF robot state |
-| **PushT** | `pusht_dset.py` | 2D pushing | 96×96 RGB | 2D position | 2D position + angle |
-| **PointMaze** | `point_maze_dset.py` | 2D maze navigation | 64×64 RGB | 2D velocity | 2D position |
-| **RoboCasa** | `robocasa_dset.py` | Kitchen manipulation | Multi-view RGB | 7-DoF delta poses | 7-DoF robot state |
+| Dataset       | Module               | Domain                  | Observations         | Actions           | State               |
+| ------------- | -------------------- | ----------------------- | -------------------- | ----------------- | ------------------- |
+| **Two Rooms** | `two_rooms_dset.py`  | 2D navigation           | 65×65 RGB            | 2D velocity       | 2D position         |
+| **DROID**     | `droid_dset.py`      | Real robot manipulation | Multi-view RGB video | 7-DoF delta poses | 7-DoF robot state   |
+| **PushT**     | `pusht_dset.py`      | 2D pushing              | 96×96 RGB            | 2D position       | 2D position + angle |
+| **PointMaze** | `point_maze_dset.py` | 2D maze navigation      | 64×64 RGB            | 2D velocity       | 2D position         |
+| **RoboCasa**  | `robocasa_dset.py`   | Kitchen manipulation    | Multi-view RGB       | 7-DoF delta poses | 7-DoF robot state   |
 
 > **Note:** RoboCasa is partially implemented (dataset loader and env wrapper exist) but has not been tested end-to-end with training or evaluation.
 
@@ -25,6 +25,7 @@ All action-conditioned datasets follow a unified interface for compatibility wit
 Located in `traj_dset.py`, this is the abstract base class for trajectory-based datasets.
 
 **Required methods:**
+
 ```python
 class TrajDataset(Dataset):
     def get_seq_length(self, idx: int) -> int:
@@ -37,6 +38,7 @@ class TrajDataset(Dataset):
 ```
 
 **Required attributes:**
+
 - `action_dim`: Dimension of action space
 - `state_dim`: Dimension of state space
 - `proprio_dim`: Dimension of proprioceptive observations
@@ -51,9 +53,10 @@ Datasets should return tuples with the following structure:
 ```
 
 Where:
+
 - `obs`: Dictionary with keys:
-  - `"visual"`: Visual observations `[T, C, H, W]`
-  - `"proprio"`: Proprioceptive state `[T, D]` (optional)
+    - `"visual"`: Visual observations `[T, C, H, W]`
+    - `"proprio"`: Proprioceptive state `[T, D]` (optional)
 - `actions`: Actions `[T, A]` or `[T-1, A]`
 - `states`: States `[T, D]`
 - `reward`: Reward signal (scalar or `[T]`)
@@ -75,6 +78,7 @@ loader = DataLoader(
 ```
 
 **Batch format after collation:**
+
 - `obs["visual"]`: `[B, C, T, H, W]` (channels first, suitable for CNN encoders)
 - `obs["proprio"]`: `[B, T, D]`
 - `actions`: `[B, A, T]` (actions transposed for predictor input)
@@ -144,33 +148,35 @@ train_loader, val_loader, config = init_data(
 To add a new trajectory-based dataset:
 
 1. **Inherit from `TrajDataset`**:
-   ```python
-   from eb_jepa.data.traj_dset import TrajDataset
 
-   class MyDataset(TrajDataset):
-       def __init__(self, ...):
-           self.action_dim = ...
-           self.state_dim = ...
-           self.proprio_dim = ...
+    ```python
+    from eb_jepa.data.traj_dset import TrajDataset
 
-       def get_seq_length(self, idx):
-           return len(self.trajectories[idx])
+    class MyDataset(TrajDataset):
+        def __init__(self, ...):
+            self.action_dim = ...
+            self.state_dim = ...
+            self.proprio_dim = ...
 
-       def __getitem__(self, idx):
-           obs = {"visual": ..., "proprio": ...}
-           actions = ...
-           states = ...
-           return obs, actions, states, reward, None
-   ```
+        def get_seq_length(self, idx):
+            return len(self.trajectories[idx])
+
+        def __getitem__(self, idx):
+            obs = {"visual": ..., "proprio": ...}
+            actions = ...
+            states = ...
+            return obs, actions, states, reward, None
+    ```
 
 2. **Create your dataset module** (e.g., `eb_jepa/data/my_dset.py`)
 
 3. **Add to `init_data` in `utils.py`**:
-   ```python
-   elif env_name == "my_dataset":
-       from eb_jepa.data.my_dset import MyDataset
-       # ... initialization logic
-   ```
+
+    ```python
+    elif env_name == "my_dataset":
+        from eb_jepa.data.my_dset import MyDataset
+        # ... initialization logic
+    ```
 
 4. **Use `traj_collate_fn` for dataloaders**
 
@@ -202,6 +208,7 @@ eb_jepa/data/
 ## Testing
 
 Run dataset tests:
+
 ```bash
 # Test basic functionality with mock data
 python tests/test_droid_dataset.py
@@ -224,12 +231,14 @@ for idx, (x, a, loc, _, _) in loader:
 ```
 
 **For DROID and similar datasets**: The `obs` dictionary returned by `traj_collate_fn` needs to be unpacked:
+
 - `x = obs["visual"]`
 - `loc = obs["proprio"]` or `states`
 
 ### Normalization
 
 Datasets may apply normalization to actions and states. Check the dataset's `normalize_action` parameter and stored statistics:
+
 - `dataset.action_mean`, `dataset.action_std`
 - `dataset.state_mean`, `dataset.state_std`
 

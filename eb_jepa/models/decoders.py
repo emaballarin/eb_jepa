@@ -1,15 +1,16 @@
 """Visual decoder classes for reconstructing images from learned representations."""
 
-from __future__ import annotations
-
 import math
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 
-from eb_jepa.models.nn import TemporalBatchMixin, init_module_weights, init_vit_weights
+from eb_jepa.models.nn import init_module_weights
+from eb_jepa.models.nn import init_vit_weights
+from eb_jepa.models.nn import TemporalBatchMixin
 
 VIT_DECODER_CONFIGS = {
     "tiny": {"hidden_size": 192, "num_layers": 12, "nhead": 3, "dim_feedforward": 768},
@@ -126,9 +127,7 @@ class VisualDecoder(TemporalBatchMixin, _VisualDecoderBase):
             ch_out = max(ch_in // 2, min_channels)
             up_blocks.append(
                 nn.Sequential(
-                    nn.ConvTranspose2d(
-                        ch_in, ch_out, kernel_size=4, stride=2, padding=1
-                    ),
+                    nn.ConvTranspose2d(ch_in, ch_out, kernel_size=4, stride=2, padding=1),
                     nn.GroupNorm(min(32, ch_out), ch_out),
                     nn.ReLU(inplace=True),
                 )
@@ -136,9 +135,7 @@ class VisualDecoder(TemporalBatchMixin, _VisualDecoderBase):
             ch_in = ch_out
         self.up_blocks = nn.ModuleList(up_blocks)
 
-        self.upsample = nn.Upsample(
-            size=(target_h, target_w), mode="bilinear", align_corners=False
-        )
+        self.upsample = nn.Upsample(size=(target_h, target_w), mode="bilinear", align_corners=False)
         self.head = nn.Conv2d(ch_in, output_channels, kernel_size=1)
 
         self.apply(init_module_weights)
@@ -224,11 +221,7 @@ class _DecoderResBlock(nn.Module):
         self.conv1 = nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1)
         self.norm2 = nn.GroupNorm(_gn_groups(ch_out), ch_out)
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
-        self.skip = (
-            nn.Conv2d(ch_in, ch_out, kernel_size=1)
-            if ch_in != ch_out
-            else nn.Identity()
-        )
+        self.skip = nn.Conv2d(ch_in, ch_out, kernel_size=1) if ch_in != ch_out else nn.Identity()
         self.act = nn.SiLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -506,9 +499,7 @@ class SpatialVisualDecoder(TemporalBatchMixin, _VisualDecoderBase):
             ch_out = max(ch_in // 2, min_channels)
             up_blocks.append(
                 nn.Sequential(
-                    nn.ConvTranspose2d(
-                        ch_in, ch_out, kernel_size=4, stride=2, padding=1
-                    ),
+                    nn.ConvTranspose2d(ch_in, ch_out, kernel_size=4, stride=2, padding=1),
                     nn.GroupNorm(min(32, ch_out), ch_out),
                     nn.ReLU(inplace=True),
                 )
@@ -516,9 +507,7 @@ class SpatialVisualDecoder(TemporalBatchMixin, _VisualDecoderBase):
             ch_in = ch_out
         self.up_blocks = nn.ModuleList(up_blocks)
 
-        self.upsample = nn.Upsample(
-            size=(target_h, target_w), mode="bilinear", align_corners=False
-        )
+        self.upsample = nn.Upsample(size=(target_h, target_w), mode="bilinear", align_corners=False)
         self.head = nn.Conv2d(ch_in, output_channels, kernel_size=1)
 
         self.apply(init_module_weights)

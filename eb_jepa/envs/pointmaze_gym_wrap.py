@@ -1,21 +1,18 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import gym
 import numpy as np
 
 from eb_jepa.envs.pointmaze_env.maze_model import MazeEnv
 from eb_jepa.envs.wrappers.time_limit import TimeLimit
 
-STATE_RANGES = np.array(
-    [
-        [0.39318362, 3.2198412],
-        [0.62660956, 3.2187355],
-        [-5.2262554, 5.2262554],
-        [-5.2262554, 5.2262554],
-    ]
-)
+STATE_RANGES = np.array([
+    [0.39318362, 3.2198412],
+    [0.62660956, 3.2187355],
+    [-5.2262554, 5.2262554],
+    [-5.2262554, 5.2262554],
+])
 
 
 class PointMazeWrapper(gym.Wrapper):
@@ -33,17 +30,15 @@ class PointMazeWrapper(gym.Wrapper):
             while not valid:
                 x = rs.uniform(0.5, 3.1)
                 y = rs.uniform(0.5, 3.1)
-                valid = (
-                    (0.5 <= x <= 1.1 or 2.5 <= x <= 3.1) and (0.5 <= y <= 3.1)
-                ) or ((1.1 < x < 2.5) and (2.5 <= y <= 3.1))
-            state = np.array(
-                [
-                    x,
-                    y,
-                    rs.uniform(low=STATE_RANGES[2][0], high=STATE_RANGES[2][1]),
-                    rs.uniform(low=STATE_RANGES[3][0], high=STATE_RANGES[3][1]),
-                ]
-            )
+                valid = ((0.5 <= x <= 1.1 or 2.5 <= x <= 3.1) and (0.5 <= y <= 3.1)) or (
+                    (1.1 < x < 2.5) and (2.5 <= y <= 3.1)
+                )
+            state = np.array([
+                x,
+                y,
+                rs.uniform(low=STATE_RANGES[2][0], high=STATE_RANGES[2][1]),
+                rs.uniform(low=STATE_RANGES[3][0], high=STATE_RANGES[3][1]),
+            ])
             return state
 
         init_state = generate_state()

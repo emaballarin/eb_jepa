@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 import time
 from pathlib import Path
@@ -13,16 +11,16 @@ from omegaconf import OmegaConf
 from tqdm import tqdm
 
 from eb_jepa.data.utils import traj_collate_fn
-from eb_jepa.planning.agent import GCAgent, decode_with_visual_decoder
+from eb_jepa.planning.agent import decode_with_visual_decoder
+from eb_jepa.planning.agent import GCAgent
 from eb_jepa.utils.distributed import unwrap_model
 from eb_jepa.utils.logging import get_logger
-from eb_jepa.vis.frames import save_gif, show_images
-from eb_jepa.vis.plots import (
-    analyze_distances,
-    create_comparison_gif,
-    plot_actions,
-    plot_losses,
-)
+from eb_jepa.vis.frames import save_gif
+from eb_jepa.vis.frames import show_images
+from eb_jepa.vis.plots import analyze_distances
+from eb_jepa.vis.plots import create_comparison_gif
+from eb_jepa.vis.plots import plot_actions
+from eb_jepa.vis.plots import plot_losses
 
 logger = get_logger(__name__)
 
@@ -99,30 +97,18 @@ def main_unroll_eval(
     unroll_times = []
     loader_iter = iter(loader)
 
-    for idx in tqdm(
-        range(num_samples), desc="Evaluating unroll", disable=cfg.logging.tqdm_silent
-    ):
+    for idx in tqdm(range(num_samples), desc="Evaluating unroll", disable=cfg.logging.tqdm_silent):
         try:
             batch = next(loader_iter)
         except StopIteration:
-            logger.warning(
-                f"Loader exhausted after {idx} samples (requested {num_samples})"
-            )
+            logger.warning(f"Loader exhausted after {idx} samples (requested {num_samples})")
             break
 
         obs_dict, a, loc, _, info = batch
         x = obs_dict["visual"] if isinstance(obs_dict, dict) else obs_dict
         if isinstance(info, list) and len(info) > 0 and isinstance(info[0], dict):
-            wall_x = (
-                torch.stack([d["wall_x"] for d in info])
-                if "wall_x" in info[0]
-                else None
-            )
-            door_y = (
-                torch.stack([d["door_y"] for d in info])
-                if "door_y" in info[0]
-                else None
-            )
+            wall_x = torch.stack([d["wall_x"] for d in info]) if "wall_x" in info[0] else None
+            door_y = torch.stack([d["door_y"] for d in info]) if "door_y" in info[0] else None
         elif isinstance(info, dict):
             wall_x = info.get("wall_x")
             door_y = info.get("door_y")
@@ -132,26 +118,18 @@ def main_unroll_eval(
 
         x = x.to(device)
         a = a[:, :, :-1].to(device)
-        val_nsteps = (
-            cfg.model.get("rollout", {}).get("val_nsteps", None) if cfg else None
-        )
+        val_nsteps = cfg.model.get("rollout", {}).get("val_nsteps", None) if cfg else None
         if val_nsteps is not None:
             eval_nsteps = min(val_nsteps, a.shape[2])
             a = a[:, :, :eval_nsteps]
         else:
             eval_nsteps = a.shape[2]
         x = x[:, :, : eval_nsteps + 1]
-        probe_state_dims = list(
-            cfg.get("probe", {}).get("state_dims", list(range(loc.shape[-1])))
-        )
-        loc = loc[
-            :, : eval_nsteps + 1, probe_state_dims
-        ]  # [B, eval_nsteps+1, probe_output_dim]
+        probe_state_dims = list(cfg.get("probe", {}).get("state_dims", list(range(loc.shape[-1]))))
+        loc = loc[:, : eval_nsteps + 1, probe_state_dims]  # [B, eval_nsteps+1, probe_output_dim]
         with torch.no_grad():
             rollout_cfg = cfg.model.get("rollout", {})
-            val_ctxt = rollout_cfg.get(
-                "val_ctxt_window_time", rollout_cfg.get("ctxt_window_time", 1)
-            )
+            val_ctxt = rollout_cfg.get("val_ctxt_window_time", rollout_cfg.get("ctxt_window_time", 1))
             obs_init = x[:, :, :val_ctxt]  # [B, C, val_ctxt, H, W]
 
             # Encode GT
@@ -217,20 +195,11 @@ def main_unroll_eval(
                 predicted_states = predicted_states_dict[level]
                 scale = model.get_temporal_scale(level) if is_hierarchical else 1
 
-                gt_encoded_l = (
-                    model.encode_hierarchical(x)
-                    if is_hierarchical
-                    else {1: model.encode(x)}
-                )[
+                gt_encoded_l = (model.encode_hierarchical(x) if is_hierarchical else {1: model.encode(x)})[
                     level
                 ]  # [B, D_l, T_l, H_l, W_l]
 
-                latent_mse = (
-                    ((gt_encoded_l - predicted_states) ** 2)
-                    .mean(dim=(1, 3, 4))
-                    .cpu()
-                    .numpy()
-                )  # [B, T_l]
+                latent_mse = ((gt_encoded_l - predicted_states) ** 2).mean(dim=(1, 3, 4)).cpu().numpy()  # [B, T_l]
                 mse_values[level].append(latent_mse)
 
                 # Action sensitivity: compare GT-action vs random-action predictions
@@ -248,50 +217,29 @@ def main_unroll_eval(
                 flat_rand = rand_predicted_states.permute(0, 2, 3, 4, 1).reshape(
                     rand_predicted_states.shape[0], rand_predicted_states.shape[2], -1
                 )  # [B, T, D*H*W]
-                cos_sim = (
-                    F.cosine_similarity(flat_gt, flat_rand, dim=-1).cpu().numpy()
-                )  # [B, T]
+                cos_sim = F.cosine_similarity(flat_gt, flat_rand, dim=-1).cpu().numpy()  # [B, T]
                 action_cosine_sim_values[level].append(cos_sim)
 
                 prober_l = probers_dict.get(level)
-                if (
-                    prober_l is not None
-                    and unwrap_model(prober_l.head).output_dim == loc.shape[-1]
-                ):
+                if prober_l is not None and unwrap_model(prober_l.head).output_dim == loc.shape[-1]:
                     # Decode predicted positions
-                    pred_positions = (
-                        prober_l.apply_head(predicted_states).permute(0, 2, 1).cpu()
-                    )  # [B, T_l, 2]
+                    pred_positions = prober_l.apply_head(predicted_states).permute(0, 2, 1).cpu()  # [B, T_l, 2]
 
                     # Subsample GT positions to match this level's temporal resolution
                     gt_positions = loc[:, ::scale, :]  # [B, T_l, 2]
 
-                    position_mse = (
-                        ((pred_positions - gt_positions.cpu()) ** 2)
-                        .mean(dim=-1)
-                        .cpu()
-                        .numpy()
-                    )  # [B, T_l]
+                    position_mse = ((pred_positions - gt_positions.cpu()) ** 2).mean(dim=-1).cpu().numpy()  # [B, T_l]
                     position_mse_values[level].append(position_mse)
 
                     # Probe accuracy: decode GT encodings and compare to GT positions
-                    gt_decoded_positions = (
-                        prober_l.apply_head(gt_encoded_l).permute(0, 2, 1).cpu()
-                    )  # [B, T_l, 2]
+                    gt_decoded_positions = prober_l.apply_head(gt_encoded_l).permute(0, 2, 1).cpu()  # [B, T_l, 2]
                     probe_accuracy = (
-                        ((gt_decoded_positions - gt_positions.cpu()) ** 2)
-                        .mean(dim=-1)
-                        .cpu()
-                        .numpy()
+                        ((gt_decoded_positions - gt_positions.cpu()) ** 2).mean(dim=-1).cpu().numpy()
                     )  # [B, T_l]
                     probe_accuracy_values[level].append(probe_accuracy)
 
                     # Generate per-level comparison GIFs (requires env with coord_to_pixel)
-                    if (
-                        preprocessor is not None
-                        and gt_frames is not None
-                        and hasattr(agent.env, "coord_to_pixel")
-                    ):
+                    if preprocessor is not None and gt_frames is not None and hasattr(agent.env, "coord_to_pixel"):
                         rand_predicted_states = rand_predicted_dict[level]
                         pred_decoded = agent.decode_loc_to_pixel(
                             predicted_states,
@@ -328,9 +276,7 @@ def main_unroll_eval(
                 if vd_l is not None and gt_frames is not None:
                     rand_predicted_states = rand_predicted_dict[level]
                     pred_frames = decode_with_visual_decoder(vd_l, predicted_states)
-                    rand_frames = decode_with_visual_decoder(
-                        vd_l, rand_predicted_states
-                    )
+                    rand_frames = decode_with_visual_decoder(vd_l, rand_predicted_states)
                     gt_dec_frames = decode_with_visual_decoder(vd_l, gt_encoded_l)
                     gt_frames_l = gt_frames[:, ::scale]
                     T_l = gt_frames_l.shape[1]
@@ -352,20 +298,10 @@ def main_unroll_eval(
                         per_t_lpips = []
                         per_t_lpips_recon = []
                         for t_idx in range(T_l):
-                            pred_t = (
-                                torch.from_numpy(pred_frames[:, t_idx])
-                                .float()
-                                .permute(0, 3, 1, 2)
-                                / 255.0
-                            ).to(
+                            pred_t = (torch.from_numpy(pred_frames[:, t_idx]).float().permute(0, 3, 1, 2) / 255.0).to(
                                 device
                             )  # [B, C, H, W]
-                            gt_t = (
-                                torch.from_numpy(gt_frames_l[:, t_idx])
-                                .float()
-                                .permute(0, 3, 1, 2)
-                                / 255.0
-                            ).to(
+                            gt_t = (torch.from_numpy(gt_frames_l[:, t_idx]).float().permute(0, 3, 1, 2) / 255.0).to(
                                 device
                             )  # [B, C, H, W]
                             with torch.amp.autocast("cuda", enabled=False):
@@ -373,13 +309,8 @@ def main_unroll_eval(
                             per_t_lpips.append(lp)
 
                             recon_t = (
-                                torch.from_numpy(gt_dec_frames[:, t_idx])
-                                .float()
-                                .permute(0, 3, 1, 2)
-                                / 255.0
-                            ).to(
-                                device
-                            )  # [B, C, H, W]
+                                torch.from_numpy(gt_dec_frames[:, t_idx]).float().permute(0, 3, 1, 2) / 255.0
+                            ).to(device)  # [B, C, H, W]
                             with torch.amp.autocast("cuda", enabled=False):
                                 lp_recon = lpips_fn(recon_t, gt_t).mean().item()
                             per_t_lpips_recon.append(lp_recon)
@@ -407,69 +338,45 @@ def main_unroll_eval(
             for t in range(mean_pos_mse.shape[0]):
                 results[f"val_rollout/level{level}/mean_pos_mse/{t}"] = mean_pos_mse[t]
                 results[f"val_rollout/level{level}/std_pos_mse/{t}"] = std_pos_mse[t]
-            results[f"val_rollout/level{level}/mean_pos_mse_avg"] = float(
-                np.mean(mean_pos_mse)
-            )
+            results[f"val_rollout/level{level}/mean_pos_mse_avg"] = float(np.mean(mean_pos_mse))
 
         if len(probe_accuracy_values[level]) > 0:
             all_probe_acc = np.vstack(probe_accuracy_values[level])
             mean_probe_acc = np.mean(all_probe_acc, axis=0)
             for t in range(mean_probe_acc.shape[0]):
-                results[f"val_rollout/level{level}/probe_accuracy_mse/{t}"] = (
-                    mean_probe_acc[t]
-                )
+                results[f"val_rollout/level{level}/probe_accuracy_mse/{t}"] = mean_probe_acc[t]
 
         if len(lpips_values[level]) > 0:
             all_lpips = np.array(lpips_values[level])  # [num_batches, T_l]
             mean_lpips = np.mean(all_lpips, axis=0)
             for t in range(mean_lpips.shape[0]):
                 results[f"val_rollout/level{level}/mean_lpips/{t}"] = mean_lpips[t]
-            results[f"val_rollout/level{level}/mean_lpips_avg"] = float(
-                np.mean(mean_lpips)
-            )
+            results[f"val_rollout/level{level}/mean_lpips_avg"] = float(np.mean(mean_lpips))
 
         if len(lpips_recon_values[level]) > 0:
             all_lpips_recon = np.array(lpips_recon_values[level])
             mean_lpips_recon = np.mean(all_lpips_recon, axis=0)
             for t in range(mean_lpips_recon.shape[0]):
-                results[f"val_rollout/level{level}/mean_lpips_recon/{t}"] = (
-                    mean_lpips_recon[t]
-                )
-            results[f"val_rollout/level{level}/mean_lpips_recon_avg"] = float(
-                np.mean(mean_lpips_recon)
-            )
+                results[f"val_rollout/level{level}/mean_lpips_recon/{t}"] = mean_lpips_recon[t]
+            results[f"val_rollout/level{level}/mean_lpips_recon_avg"] = float(np.mean(mean_lpips_recon))
 
         if len(lpips_values[level]) > 0 and len(lpips_recon_values[level]) > 0:
             prediction_lpips = mean_lpips - mean_lpips_recon
-            results[f"val_rollout/level{level}/prediction_lpips_avg"] = float(
-                np.mean(prediction_lpips)
-            )
+            results[f"val_rollout/level{level}/prediction_lpips_avg"] = float(np.mean(prediction_lpips))
 
         if len(action_sensitivity_values[level]) > 0:
-            all_act_sens = np.vstack(
-                action_sensitivity_values[level]
-            )  # [num_batches, T_l]
+            all_act_sens = np.vstack(action_sensitivity_values[level])  # [num_batches, T_l]
             mean_act_sens = np.mean(all_act_sens, axis=0)  # [T_l]
             for t in range(mean_act_sens.shape[0]):
-                results[f"val_rollout/level{level}/action_sensitivity/{t}"] = (
-                    mean_act_sens[t]
-                )
-            results[f"val_rollout/level{level}/action_sensitivity_avg"] = float(
-                np.mean(mean_act_sens)
-            )
+                results[f"val_rollout/level{level}/action_sensitivity/{t}"] = mean_act_sens[t]
+            results[f"val_rollout/level{level}/action_sensitivity_avg"] = float(np.mean(mean_act_sens))
 
         if len(action_cosine_sim_values[level]) > 0:
-            all_cos_sim = np.vstack(
-                action_cosine_sim_values[level]
-            )  # [num_batches, T_l]
+            all_cos_sim = np.vstack(action_cosine_sim_values[level])  # [num_batches, T_l]
             mean_cos_sim = np.mean(all_cos_sim, axis=0)  # [T_l]
             for t in range(mean_cos_sim.shape[0]):
-                results[f"val_rollout/level{level}/action_cosine_sim/{t}"] = (
-                    mean_cos_sim[t]
-                )
-            results[f"val_rollout/level{level}/action_cosine_sim_avg"] = float(
-                np.mean(mean_cos_sim)
-            )
+                results[f"val_rollout/level{level}/action_cosine_sim/{t}"] = mean_cos_sim[t]
+            results[f"val_rollout/level{level}/action_cosine_sim_avg"] = float(np.mean(mean_cos_sim))
 
     pd.DataFrame([results]).to_csv(f"{eval_folder}/eval.csv", index=None)
     return results
@@ -496,9 +403,7 @@ def main_eval(
         for level_name, level_cfg in level_configs.items():
             stats_path = level_cfg.get("latent_action_stats_path", None)
             if stats_path is not None and not os.path.isabs(stats_path):
-                level_cfg["latent_action_stats_path"] = os.path.join(
-                    model_folder, stats_path
-                )
+                level_cfg["latent_action_stats_path"] = os.path.join(model_folder, stats_path)
 
     env = env_creator()
     env.reset()
@@ -595,9 +500,7 @@ def main_eval(
                 x = obs_dict["visual"][0]  # [C, T, H, W]
                 gt_actions = a[0, :, :-1]  # [A, T-1]
                 obs = preprocessor.unnormalize_visual(x[:, 0])  # [C, H, W] → raw [0,1]
-                goal_img = preprocessor.unnormalize_visual(
-                    x[:, -1]
-                )  # [C, H, W] → raw [0,1]
+                goal_img = preprocessor.unnormalize_visual(x[:, -1])  # [C, H, W] → raw [0,1]
                 goal_position = state_raw[end - 1]
         elif goal_source == "random_state":
             if hasattr(env, "sample_random_init_goal_states"):
@@ -607,9 +510,7 @@ def main_eval(
                 obs, info = env.prepare(ep, init_state)
             else:
                 obs, info = env.reset()
-                obs, reward, done, truncated, info = env.step(
-                    np.zeros(env.action_space.shape[0])
-                )
+                obs, reward, done, truncated, info = env.step(np.zeros(env.action_space.shape[0]))
                 goal_img = info["target_obs"]
                 goal_position = info.get("target_position")
 
@@ -633,18 +534,13 @@ def main_eval(
         if offline:
             # ---- Offline: single-shot plan + ATE ----
             obs_tensor = (
-                preprocessor.normalize_obs(
-                    obs.detach().clone().to(dtype=torch.float32, device=agent.device)
-                )
+                preprocessor
+                .normalize_obs(obs.detach().clone().to(dtype=torch.float32, device=agent.device))
                 .unsqueeze(0)
                 .unsqueeze(2)
             )  # [1, C, 1, H, W]
-            plan_vis_path = (
-                f"{ep_plan_vis_dir}/step0" if agent.decode_each_iteration else None
-            )
-            planning_result = agent.plan(
-                obs_tensor, t0=True, plan_vis_path=plan_vis_path
-            )
+            plan_vis_path = f"{ep_plan_vis_dir}/step0" if agent.decode_each_iteration else None
+            planning_result = agent.plan(obs_tensor, t0=True, plan_vis_path=plan_vis_path)
 
             if agent._is_hierarchical:
                 level_results = planning_result.level_results
@@ -666,22 +562,16 @@ def main_eval(
 
             delta = torch.abs(planned_raw.sum(0) - gt_raw.sum(0))
             end_distance = delta.sum().item()
-            end_distance_xyz = (
-                delta[:3].sum().item() if delta.shape[0] >= 3 else end_distance
-            )
-            end_distance_orientation = (
-                delta[3:6].sum().item() if delta.shape[0] >= 6 else 0.0
-            )
+            end_distance_xyz = delta[:3].sum().item() if delta.shape[0] >= 3 else end_distance
+            end_distance_orientation = delta[3:6].sum().item() if delta.shape[0] >= 6 else 0.0
             end_distance_closure = delta[6:].sum().item() if delta.shape[0] > 6 else 0.0
 
-            ate_results.append(
-                {
-                    "ate/end_distance": end_distance,
-                    "ate/end_distance_xyz": end_distance_xyz,
-                    "ate/end_distance_orientation": end_distance_orientation,
-                    "ate/end_distance_closure": end_distance_closure,
-                }
-            )
+            ate_results.append({
+                "ate/end_distance": end_distance,
+                "ate/end_distance_xyz": end_distance_xyz,
+                "ate/end_distance_orientation": end_distance_orientation,
+                "ate/end_distance_closure": end_distance_closure,
+            })
             logger.info(
                 f"Episode {ep}: ATE={end_distance:.4f} "
                 f"(xyz={end_distance_xyz:.4f}, ori={end_distance_orientation:.4f}, "
@@ -697,11 +587,7 @@ def main_eval(
                             x_vis.permute(1, 0, 2, 3)  # [T, C, H, W]
                         )  # [T, H, W, C] numpy uint8
                     else:
-                        expert_frames = (
-                            (x_vis.permute(1, 0, 2, 3) * 255)
-                            .clamp(0, 255)
-                            .to(torch.uint8)
-                        )  # [T, C, H, W]
+                        expert_frames = (x_vis.permute(1, 0, 2, 3) * 255).clamp(0, 255).to(torch.uint8)  # [T, C, H, W]
                     save_gif(
                         expert_frames,
                         save_path=f"{ep_folder}/expert_trajectory.gif",
@@ -713,8 +599,7 @@ def main_eval(
                 plot_losses(
                     (
                         [planning_result.losses]
-                        if hasattr(planning_result, "losses")
-                        and planning_result.losses is not None
+                        if hasattr(planning_result, "losses") and planning_result.losses is not None
                         else []
                     ),
                     (
@@ -737,11 +622,7 @@ def main_eval(
                     {"planned": planned_raw, "gt": gt_raw},
                     Path(ep_folder) / "actions.pt",
                 )
-                dim_labels = (
-                    ["x", "y", "z", "rx", "ry", "rz", "grip"]
-                    if planned_raw.shape[-1] == 7
-                    else None
-                )
+                dim_labels = ["x", "y", "z", "rx", "ry", "rz", "grip"] if planned_raw.shape[-1] == 7 else None
                 plot_actions(
                     planned_raw,
                     gt_raw,
@@ -774,16 +655,11 @@ def main_eval(
 
             while steps_left > 0:
                 plan_vis_path = (
-                    f"{ep_plan_vis_dir}/step{env.n_allowed_steps - steps_left}"
-                    if agent.decode_each_iteration
-                    else None
+                    f"{ep_plan_vis_dir}/step{env.n_allowed_steps - steps_left}" if agent.decode_each_iteration else None
                 )
                 obs_tensor = (
-                    preprocessor.normalize_obs(
-                        obs.detach()
-                        .clone()
-                        .to(dtype=torch.float32, device=agent.device)
-                    )
+                    preprocessor
+                    .normalize_obs(obs.detach().clone().to(dtype=torch.float32, device=agent.device))
                     .unsqueeze(0)
                     .unsqueeze(2)
                 )  # [1, C, 1, H, W]
@@ -796,15 +672,9 @@ def main_eval(
                 # action is already raw env-space numpy [T_env, env_action_dim]
                 if agent._prev_losses_per_level:
                     for level, data in agent._prev_losses_per_level.items():
-                        prev_losses_per_level.setdefault(level, []).append(
-                            data["losses"]
-                        )
-                        prev_elite_losses_mean_per_level.setdefault(level, []).append(
-                            data["elite_mean"]
-                        )
-                        prev_elite_losses_std_per_level.setdefault(level, []).append(
-                            data["elite_std"]
-                        )
+                        prev_losses_per_level.setdefault(level, []).append(data["losses"])
+                        prev_elite_losses_mean_per_level.setdefault(level, []).append(data["elite_mean"])
+                        prev_elite_losses_std_per_level.setdefault(level, []).append(data["elite_std"])
                 elif agent._prev_losses is not None:
                     prev_losses.append(agent._prev_losses)
                     prev_elite_losses_mean.append(agent._prev_elite_losses_mean)
@@ -831,10 +701,7 @@ def main_eval(
             distances.append(state_dist)
 
             raw_normalizer = getattr(env, "normalizer", None)
-            if (
-                plan_cfg.logging.get("optional_plots", True)
-                and raw_normalizer is not None
-            ):
+            if plan_cfg.logging.get("optional_plots", True) and raw_normalizer is not None:
                 analyze_distances(
                     episode_observations[-1],
                     episode_infos[-1],
@@ -883,9 +750,7 @@ def main_eval(
         episode_times.append(episode_end_time - episode_start_time)
 
     if offline:
-        task_data = {
-            k: np.mean([r[k] for r in ate_results]) for k in ate_results[0].keys()
-        }
+        task_data = {k: np.mean([r[k] for r in ate_results]) for k in ate_results[0].keys()}
         task_data["avg_episode_time"] = np.mean(episode_times)
     else:
         task_data = {

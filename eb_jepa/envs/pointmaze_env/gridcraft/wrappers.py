@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import numpy as np
 from gym.spaces import Box
 
-from .grid_env import REWARD, GridEnv
+from .grid_env import GridEnv
+from .grid_env import REWARD
 from .wrappers import ObsWrapper
 
 
@@ -55,15 +55,13 @@ class EyesWrapper(ObsWrapper):
                 if np.any(dists <= 1.0):
                     on_target = 1.0
                 eye_data = np.abs(
-                    np.array(
-                        [
-                            on_target,
-                            np.max(cosines),
-                            np.min(cosines),
-                            np.max(sines),
-                            np.min(sines),
-                        ]
-                    )
+                    np.array([
+                        on_target,
+                        np.max(cosines),
+                        np.min(cosines),
+                        np.max(sines),
+                        np.min(sines),
+                    ])
                 )
                 eye_data[np.where(eye_data <= self.angle_thresh)] = 0
             extra_obs.append(eye_data)

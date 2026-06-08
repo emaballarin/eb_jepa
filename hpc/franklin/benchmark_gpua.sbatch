@@ -36,10 +36,12 @@ cd "$REPO_DIR"
 echo "Node: $(hostname)"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
 
+# NOTE: every override is a Fire flag (`--key=value`); booleans must be
+# Python-capitalized (`False`/`True`) so Fire parses them as bool, not str.
 srun python -m examples.video_jepa.main \
-  --fname examples/video_jepa/cfgs/default.yaml \
-  logging.log_wandb=false \
-  logging.tqdm_silent=true \
-  data.batch_size=128 \
-  data.num_workers=8 \
-  optim.epochs=50
+  --fname=examples/video_jepa/cfgs/default.yaml \
+  --logging.log_wandb=False \
+  --logging.tqdm_silent=True \
+  --data.batch_size=128 \
+  --data.num_workers=8 \
+  --optim.epochs=50

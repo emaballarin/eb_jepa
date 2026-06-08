@@ -154,11 +154,7 @@ class JEPA(JEPAbase):
             - losses: None if compute_loss=False, otherwise tuple of 5 elements:
               (total_loss, reg_loss, reg_loss_unweighted, reg_loss_dict, pred_loss)
         """
-        state = (
-            _precomputed_state
-            if _precomputed_state is not None
-            else self.encoder(observations)
-        )
+        state = _precomputed_state if _precomputed_state is not None else self.encoder(observations)
 
         pred_target = state.detach() if detach_pred_target else state
         context_length = getattr(self.predictor, "context_length", 1)
@@ -196,18 +192,12 @@ class JEPA(JEPAbase):
                     )
                 if actions_encoded is not None:
                     T_a = actions_encoded.size(2)
-                    predicted_states = self.predictor(
-                        pred_input[:, :, :T_a], actions_encoded
-                    )
+                    predicted_states = self.predictor(pred_input[:, :, :T_a], actions_encoded)
                 else:
-                    predicted_states = self.predictor(pred_input, actions_encoded)[
-                        :, :, :-1
-                    ]
+                    predicted_states = self.predictor(pred_input, actions_encoded)[:, :, :-1]
                 if return_all_steps:
                     all_steps.append(predicted_states)
-                predicted_states = torch.cat(
-                    (state[:, :, :context_length], predicted_states), dim=2
-                )
+                predicted_states = torch.cat((state[:, :, :context_length], predicted_states), dim=2)
                 if compute_loss:
                     ploss += self.predcost(pred_target, predicted_states) / nsteps
 
@@ -228,10 +218,7 @@ class JEPA(JEPAbase):
         # Note: RNN predictors (is_rnn=True) are a special case with W=1.
         elif unroll_mode == "autoregressive":
             effective_ctxt_window = 1 if self.single_unroll else ctxt_window_time
-            if (
-                actions is not None
-                and nsteps + effective_ctxt_window - 1 > actions.size(2)
-            ):
+            if actions is not None and nsteps + effective_ctxt_window - 1 > actions.size(2):
                 raise ValueError(
                     f"nsteps ({nsteps}) + ctxt_window ({effective_ctxt_window}) "
                     f"= {nsteps + effective_ctxt_window} exceeds action sequence "
@@ -248,17 +235,11 @@ class JEPA(JEPAbase):
                 if actions_encoded is not None:
                     buf_len = predicted_states.size(2)
                     act_start = max(0, buf_len - W)
-                    context_actions = actions_encoded[
-                        :, :, act_start:buf_len
-                    ]  # [B, A, ≤W]
+                    context_actions = actions_encoded[:, :, act_start:buf_len]  # [B, A, ≤W]
                 else:
                     context_actions = None
-                pred_step = self.predictor(context_states, context_actions)[
-                    :, :, -1:
-                ]  # [B, D, 1, H', W']
-                predicted_states = torch.cat(
-                    [predicted_states, pred_step], dim=2
-                )  # [B, D, W+i+1, H', W']
+                pred_step = self.predictor(context_states, context_actions)[:, :, -1:]  # [B, D, 1, H', W']
+                predicted_states = torch.cat([predicted_states, pred_step], dim=2)  # [B, D, W+i+1, H', W']
                 if return_all_steps:
                     all_steps.append(predicted_states.clone())
                 if compute_loss:
@@ -368,9 +349,7 @@ class JEPAWithCostModule(JEPA):
         self.cost_module = cost_module
 
     def unroll(self, observations, actions, **kwargs):
-        predicted_states, enc_states, losses = super().unroll(
-            observations, actions, **kwargs
-        )
+        predicted_states, enc_states, losses = super().unroll(observations, actions, **kwargs)
 
         if losses is None or self.cost_module is None:
             return predicted_states, enc_states, losses

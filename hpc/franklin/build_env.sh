@@ -6,7 +6,7 @@
 #
 # Result:
 #   * venv at $EBJEPA_VENV_HOME/.venv  (default: ~/venvs/eb_jepa/.venv)
-#   * nightly PyTorch + torchvision from the cu128 channel
+#   * nightly PyTorch + torchvision from the cu126 channel
 #   * eb_jepa installed editable (--no-deps) from this repo checkout
 #
 # Override the venv location by exporting EBJEPA_VENV_HOME before running.
@@ -21,11 +21,11 @@ echo ">> Venv home:  $VENV_HOME"
 mkdir -p "$VENV_HOME"
 cp "$REPO_DIR/hpc/franklin/eb_jepa-env.pyproject.toml" "$VENV_HOME/pyproject.toml"
 
-# Resolve + install the (minimal) third-party deps, with uv-managed CPython 3.14.
-uv sync --project "$VENV_HOME" --python 3.14
+# Resolve + install the (minimal) third-party deps, with uv-managed CPython 3.13.
+uv sync --project "$VENV_HOME" --python 3.13
 
 # Make `eb_jepa` importable without re-resolving its heavy dependency list.
-# This relies on the repo pyproject's requires-python being relaxed to allow 3.14.
+# This relies on the repo pyproject's requires-python being relaxed to allow 3.13.
 uv pip install --python "$VENV_HOME/.venv/bin/python" -e "$REPO_DIR" --no-deps
 
 echo

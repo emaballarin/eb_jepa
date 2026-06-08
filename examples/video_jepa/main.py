@@ -137,7 +137,7 @@ def run(
     encoder = ResNet5(cfg.model.dobs, cfg.model.henc, cfg.model.dstc)
     predictor_model = ResUNet(2 * cfg.model.dstc, cfg.model.hpre, cfg.model.dstc)
     predictor = StateOnlyPredictor(predictor_model, context_length=2)
-    projector = Projector(f"{cfg.model.dstc}-{cfg.model.dstc*4}-{cfg.model.dstc*4}")
+    projector = Projector(f"{cfg.model.dstc}-{cfg.model.dstc * 4}-{cfg.model.dstc * 4}")
     regularizer = VCLoss(cfg.loss.std_coeff, cfg.loss.cov_coeff, proj=projector)
     ploss = SquareLossSeq(projector)
     jepa = JEPA(encoder, encoder, predictor, regularizer, ploss).to(device)
@@ -248,21 +248,17 @@ def run(
                 rank_acc.accumulate("train/visual_effective_rank", flat_enc)
 
             # Update progress bar
-            pbar.set_postfix(
-                {
-                    "loss": f"{jepa_loss.item():.4f}",
-                    "vc": f"{regl.item():.4f}",
-                    "pred": f"{pl.item():.4f}",
-                }
-            )
+            pbar.set_postfix({
+                "loss": f"{jepa_loss.item():.4f}",
+                "vc": f"{regl.item():.4f}",
+                "pred": f"{pl.item():.4f}",
+            })
 
             global_step += 1
 
         # Validation and logging
         if is_main and epoch % cfg.logging.log_every == 0:
-            val_logs = validation_loop(
-                val_loader, jepa, detection_head, pixel_decoder, cfg.model.steps, device
-            )
+            val_logs = validation_loop(val_loader, jepa, detection_head, pixel_decoder, cfg.model.steps, device)
 
             train_metrics = {
                 "epoch": epoch,

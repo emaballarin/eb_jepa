@@ -23,16 +23,14 @@ from eb_jepa.jepa import JEPAbase
 from eb_jepa.utils.checkpoint import load_checkpoint
 from eb_jepa.utils.logging import get_logger
 from eb_jepa.utils.training import setup_device
-from eb_jepa.vis.heatmaps import (
-    _DISPLAY_ORIGINS,
-    _collect_heatmap_data,
-    _edge_goals,
-    _get_normalize_fn,
-    _level_desc,
-    _load_data_config,
-    _setup_env,
-    visualize_heatmaps_grid,
-)
+from eb_jepa.vis.heatmaps import _collect_heatmap_data
+from eb_jepa.vis.heatmaps import _DISPLAY_ORIGINS
+from eb_jepa.vis.heatmaps import _edge_goals
+from eb_jepa.vis.heatmaps import _get_normalize_fn
+from eb_jepa.vis.heatmaps import _level_desc
+from eb_jepa.vis.heatmaps import _load_data_config
+from eb_jepa.vis.heatmaps import _setup_env
+from eb_jepa.vis.heatmaps import visualize_heatmaps_grid
 
 logger = get_logger(__name__)
 
@@ -66,11 +64,9 @@ def _build_model_for_viz(cfg, data_cfg, device):
     if hasattr(cfg.model, "encoder"):
         enc_cfg = cfg.model.encoder
     else:
-        enc_cfg = OmegaConf.create(
-            {
-                "architecture": cfg.model.get("encoder_architecture", "impala"),
-            }
-        )
+        enc_cfg = OmegaConf.create({
+            "architecture": cfg.model.get("encoder_architecture", "impala"),
+        })
 
     encoder, _, _ = build_encoder(
         enc_cfg,
@@ -139,9 +135,7 @@ def main(
 
         desc = _level_desc(level, num_levels)
         level_suffix = f"_level{level}" if desc else ""
-        output_path = str(
-            heatmaps_dir / output_filename.replace(".pdf", f"{level_suffix}.pdf")
-        )
+        output_path = str(heatmaps_dir / output_filename.replace(".pdf", f"{level_suffix}.pdf"))
         suptitle = desc or None
 
         visualize_heatmaps_grid(
@@ -161,10 +155,7 @@ def main(
             origin=origin,
         )
 
-    logger.info(
-        f"Done! Generated heatmaps for {num_levels} level(s) "
-        f"with {num_goals} goals in {heatmaps_dir}"
-    )
+    logger.info(f"Done! Generated heatmaps for {num_levels} level(s) with {num_goals} goals in {heatmaps_dir}")
 
 
 if __name__ == "__main__":

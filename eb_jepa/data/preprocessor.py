@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import numpy as np
 import torch
 from einops import rearrange
@@ -123,29 +122,21 @@ class Preprocessor:
 
     def normalize_actions(self, actions):
         """Z-score normalize actions. Works for any shape ``[..., action_dim]``."""
-        return (actions - self.action_mean.to(actions.device)) / self.action_std.to(
-            actions.device
-        )
+        return (actions - self.action_mean.to(actions.device)) / self.action_std.to(actions.device)
 
     def denormalize_actions(self, actions):
         """Invert z-score normalization. Works for any shape ``[..., action_dim]``."""
-        return actions * self.action_std.to(actions.device) + self.action_mean.to(
-            actions.device
-        )
+        return actions * self.action_std.to(actions.device) + self.action_mean.to(actions.device)
 
     def denormalize_proprios(self, proprio):
         """Invert z-score normalization. Works for any shape ``[..., proprio_dim]``."""
-        return proprio * self.proprio_std.to(proprio.device) + self.proprio_mean.to(
-            proprio.device
-        )
+        return proprio * self.proprio_std.to(proprio.device) + self.proprio_mean.to(proprio.device)
 
     def normalize_proprios(self, proprio):
         """
         input shape (..., proprio_dim)
         """
-        return (proprio - self.proprio_mean.to(proprio.device)) / self.proprio_std.to(
-            proprio.device
-        )
+        return (proprio - self.proprio_mean.to(proprio.device)) / self.proprio_std.to(proprio.device)
 
     def normalize_states(self, state):
         """
@@ -166,9 +157,7 @@ class Preprocessor:
 
     def transform_obs_visual(self, obs_visual):
         transformed_obs_visual = torch.tensor(obs_visual)
-        transformed_obs_visual = (
-            rearrange(transformed_obs_visual, "b t h w c -> b t c h w") / 255.0
-        )
+        transformed_obs_visual = rearrange(transformed_obs_visual, "b t h w c -> b t c h w") / 255.0
         transformed_obs_visual = self.transform(transformed_obs_visual)
         return transformed_obs_visual
 
@@ -178,7 +167,5 @@ class Preprocessor:
         """
         transformed_obs = {}
         transformed_obs["visual"] = self.transform_obs_visual(obs["visual"])
-        transformed_obs["proprio"] = self.normalize_proprios(
-            torch.tensor(obs["proprio"])
-        )
+        transformed_obs["proprio"] = self.normalize_proprios(torch.tensor(obs["proprio"]))
         return transformed_obs

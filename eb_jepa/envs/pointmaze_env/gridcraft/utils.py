@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import numpy as np
 
 
@@ -28,11 +27,11 @@ def flat_to_one_hot(val, ndim):
 
 def one_hot_to_flat(val):
     """
-    >>> one_hot_to_flat(np.array([0,0,0,0,1]))
+    >>> one_hot_to_flat(np.array([0, 0, 0, 0, 1]))
     4
-    >>> one_hot_to_flat(np.array([0,0,1,0]))
+    >>> one_hot_to_flat(np.array([0, 0, 1, 0]))
     2
-    >>> one_hot_to_flat(np.array([[0,0,1,0], [1,0,0,0], [0,1,0,0]]))
+    >>> one_hot_to_flat(np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0]]))
     array([2, 0, 1])
     """
     idxs = np.array(np.where(val == 1.0))[-1]

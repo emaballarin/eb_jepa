@@ -5,48 +5,41 @@ top-level cfg, so they are config-shape-agnostic. Both flat (ac_video_jepa)
 and hierarchical (h_ac_video_jepa) examples use these builders.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
+from typing import Tuple
 
 import torch
 import torch.nn as nn
 
 from eb_jepa.jepa import JEPAProbe
-from eb_jepa.losses.prediction import LPIPSLoss, SquareLossSeq
-from eb_jepa.losses.regularizers import (
-    SIGReg_IDM_Sim_Regularizer,
-    VC_IDM_Sim_Regularizer,
-)
-from eb_jepa.models.components import (
-    ActionMLP,
-    AttentiveInverseDynamicsModel,
-    ConvEncoder,
-    CostModule,
-    InverseDynamicsModel,
-    MLPEncoder,
-    Projector,
-)
-from eb_jepa.models.decoders import (
-    ResNetVisualDecoder,
-    SpatialVisualDecoder,
-    VisualDecoder,
-    ViTVisualDecoder,
-)
-from eb_jepa.models.encoders import (
-    DinoEncoder,
-    ImpalaEncoder,
-    TorchVisionEncoder,
-    ViTCLSEncoder,
-    ViTEncoder,
-)
-from eb_jepa.models.predictors import (
-    CausalTransformerPredictor,
-    ConvGRUPredictor,
-    ConvNeXtGRUPredictor,
-    RNNPredictor,
-    SpatialCausalTransformerPredictor,
-    UNetGRUPredictor,
-)
-from eb_jepa.models.probes import AttentiveXYHead, MLPXYHead
+from eb_jepa.losses.prediction import LPIPSLoss
+from eb_jepa.losses.prediction import SquareLossSeq
+from eb_jepa.losses.regularizers import SIGReg_IDM_Sim_Regularizer
+from eb_jepa.losses.regularizers import VC_IDM_Sim_Regularizer
+from eb_jepa.models.components import ActionMLP
+from eb_jepa.models.components import AttentiveInverseDynamicsModel
+from eb_jepa.models.components import ConvEncoder
+from eb_jepa.models.components import CostModule
+from eb_jepa.models.components import InverseDynamicsModel
+from eb_jepa.models.components import MLPEncoder
+from eb_jepa.models.components import Projector
+from eb_jepa.models.decoders import ResNetVisualDecoder
+from eb_jepa.models.decoders import SpatialVisualDecoder
+from eb_jepa.models.decoders import VisualDecoder
+from eb_jepa.models.decoders import ViTVisualDecoder
+from eb_jepa.models.encoders import DinoEncoder
+from eb_jepa.models.encoders import ImpalaEncoder
+from eb_jepa.models.encoders import TorchVisionEncoder
+from eb_jepa.models.encoders import ViTCLSEncoder
+from eb_jepa.models.encoders import ViTEncoder
+from eb_jepa.models.predictors import CausalTransformerPredictor
+from eb_jepa.models.predictors import ConvGRUPredictor
+from eb_jepa.models.predictors import ConvNeXtGRUPredictor
+from eb_jepa.models.predictors import RNNPredictor
+from eb_jepa.models.predictors import SpatialCausalTransformerPredictor
+from eb_jepa.models.predictors import UNetGRUPredictor
+from eb_jepa.models.probes import AttentiveXYHead
+from eb_jepa.models.probes import MLPXYHead
 from eb_jepa.utils.logging import get_logger
 from eb_jepa.utils.optimizers import LARS
 
@@ -98,17 +91,13 @@ def build_encoder(
         spatial_size = (1, 1)
 
     elif architecture == "vit_cls":
-        encoder = ViTCLSEncoder(
-            image_size=img_size, input_channels=input_channels, **enc_params
-        )
+        encoder = ViTCLSEncoder(image_size=img_size, input_channels=input_channels, **enc_params)
         output_dim = encoder.output_dim
         spatial_size = (1, 1)
 
     elif architecture == "vit":
         patch_size = enc_params.get("patch_size", 16)
-        encoder = ViTEncoder(
-            image_size=img_size, input_channels=input_channels, **enc_params
-        )
+        encoder = ViTEncoder(image_size=img_size, input_channels=input_channels, **enc_params)
         output_dim = encoder.output_dim
         grid = img_size // patch_size
         spatial_size = (grid, grid)
@@ -151,9 +140,7 @@ def build_encoder(
     else:
         raise ValueError(f"Unknown encoder architecture: {architecture}")
 
-    output_dim = getattr(encoder, "output_dim", None) or getattr(
-        encoder, "mlp_output_dim", output_dim
-    )
+    output_dim = getattr(encoder, "output_dim", None) or getattr(encoder, "mlp_output_dim", output_dim)
     return encoder, output_dim, spatial_size
 
 
@@ -182,9 +169,7 @@ def build_predictor(
         Predictor module.
     """
     if train_autoenc_only:
-        logger.info(
-            "Autoencoder-only mode: using Identity predictor (no prediction loss)"
-        )
+        logger.info("Autoencoder-only mode: using Identity predictor (no prediction loss)")
         return nn.Identity()
 
     pred_cfg = dict(cfg_predictor)
@@ -380,10 +365,7 @@ def build_cost_module(
         detach=loss_cfg.get("detach_encoder", True),
     )
     cost_module = CostModule(projector=projector, loss=loss_fn)
-    logger.info(
-        f"Cost module: projector={mlp_spec}, "
-        f"detach_encoder={loss_cfg.get('detach_encoder', True)}"
-    )
+    logger.info(f"Cost module: projector={mlp_spec}, detach_encoder={loss_cfg.get('detach_encoder', True)}")
     return cost_module
 
 
@@ -479,10 +461,7 @@ def build_visual_decoder(
             normalize_mean=normalize_mean,
             normalize_std=normalize_std,
         ).to(device)
-        logger.info(
-            f"ViT visual decoder built "
-            f"(scale={vd_cfg.get('vit_scale', encoder_scale)})"
-        )
+        logger.info(f"ViT visual decoder built (scale={vd_cfg.get('vit_scale', encoder_scale)})")
     elif vd_type == "resnet":
         visual_decoder = ResNetVisualDecoder(
             input_dim=encoder_output_dim,
@@ -496,8 +475,7 @@ def build_visual_decoder(
             normalize_std=normalize_std,
         ).to(device)
         logger.info(
-            f"ResNet visual decoder built (input_spatial={spatial_h}, "
-            f"base_channels={vd_cfg.get('base_channels', 256)})"
+            f"ResNet visual decoder built (input_spatial={spatial_h}, base_channels={vd_cfg.get('base_channels', 256)})"
         )
     elif spatial_h > 1:
         visual_decoder = SpatialVisualDecoder(
@@ -527,10 +505,7 @@ def build_visual_decoder(
             normalize_mean=normalize_mean,
             normalize_std=normalize_std,
         ).to(device)
-        logger.info(
-            f"Visual decoder built "
-            f"(base_channels={vd_cfg.get('base_channels', 256)})"
-        )
+        logger.info(f"Visual decoder built (base_channels={vd_cfg.get('base_channels', 256)})")
 
     import lpips as lpips_lib
 
@@ -656,10 +631,7 @@ def build_optimizer(
             exclude_bias_n_norm=cfg_optim.get("lars_exclude_bias_n_norm", True),
         )
     else:
-        raise ValueError(
-            f"Unknown optimizer type: {optim_type!r}. "
-            f"Supported: 'adamw', 'adam', 'lars'."
-        )
+        raise ValueError(f"Unknown optimizer type: {optim_type!r}. Supported: 'adamw', 'adam', 'lars'.")
 
 
 def build_action_regularizer(

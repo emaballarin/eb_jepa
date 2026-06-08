@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import gymnasium as gym
 import numpy as np
@@ -10,7 +11,9 @@ import torch
 from eb_jepa.planning.agent import GCAgent
 from eb_jepa.planning.evaluation import main_eval
 from eb_jepa.planning.objectives import ReprDistObjective
-from eb_jepa.planning.optimizers import CEMPlanner, MPPIPlanner, PlanningResult
+from eb_jepa.planning.optimizers import CEMPlanner
+from eb_jepa.planning.optimizers import MPPIPlanner
+from eb_jepa.planning.optimizers import PlanningResult
 
 
 def test_cem_planner():
@@ -48,12 +51,8 @@ def test_cem_planner():
         2,
     ), f"Actions should have shape (1, 2) but have shape {result.actions.shape}"
     assert isinstance(result.losses, torch.Tensor), "Losses should be a tensor"
-    assert isinstance(
-        result.prev_elite_losses_mean, torch.Tensor
-    ), "Elite means should be a tensor"
-    assert isinstance(
-        result.prev_elite_losses_std, torch.Tensor
-    ), "Elite stds should be a tensor"
+    assert isinstance(result.prev_elite_losses_mean, torch.Tensor), "Elite means should be a tensor"
+    assert isinstance(result.prev_elite_losses_std, torch.Tensor), "Elite stds should be a tensor"
 
     # Test 2: Planning with steps_left parameter
     result_with_steps = planner.plan(obs_init, steps_left=2)
@@ -124,9 +123,7 @@ def test_repr_target_dist_objective():
     # Test with matching representation
     matching_repr = torch.ones(1, 8, 5, 8, 8)  # B, C, T, H, W
     matching_cost = objective(matching_repr)
-    assert (
-        matching_cost.item() < cost[0].item()
-    ), "Cost should be lower for matching repr"
+    assert matching_cost.item() < cost[0].item(), "Cost should be lower for matching repr"
 
 
 @patch("eb_jepa.planning.agent.CEMPlanner")
@@ -155,9 +152,7 @@ def test_gc_agent(mock_cem_planner):
     mock_planner_instance = Mock()
     mock_planner_instance.plan = Mock(return_value=planning_result)
     mock_planner_instance.objective = None
-    mock_planner_instance.set_objective = Mock(
-        side_effect=lambda obj: setattr(mock_planner_instance, "objective", obj)
-    )
+    mock_planner_instance.set_objective = Mock(side_effect=lambda obj: setattr(mock_planner_instance, "objective", obj))
     mock_cem_planner.return_value = mock_planner_instance
 
     # Patch planner_name_map so the mock planner is actually used
@@ -167,26 +162,24 @@ def test_gc_agent(mock_cem_planner):
     ):
         from omegaconf import OmegaConf
 
-        plan_cfg = OmegaConf.create(
-            {
-                "planner": {
-                    "planner_name": "cem",
-                    "n_iters": 3,
-                    "num_samples": 10,
-                    "plan_length": 5,
-                    "num_elites": 2,
-                    "var_scale": 1.0,
-                    "decode_each_iteration": False,
-                    "num_act_stepped": 1,
-                    "planning_objective": {
-                        "objective_type": "repr_dist",
-                        "sum_all_diffs": True,
-                    },
+        plan_cfg = OmegaConf.create({
+            "planner": {
+                "planner_name": "cem",
+                "n_iters": 3,
+                "num_samples": 10,
+                "plan_length": 5,
+                "num_elites": 2,
+                "var_scale": 1.0,
+                "decode_each_iteration": False,
+                "num_act_stepped": 1,
+                "planning_objective": {
+                    "objective_type": "repr_dist",
+                    "sum_all_diffs": True,
                 },
-                "ctxt_window_time": 2,
-                "logging": {"tqdm_silent": False, "verbose": False},
-            }
-        )
+            },
+            "ctxt_window_time": 2,
+            "logging": {"tqdm_silent": False, "verbose": False},
+        })
 
         agent = GCAgent(
             mock_model,
@@ -201,9 +194,7 @@ def test_gc_agent(mock_cem_planner):
         agent.set_goal(goal_state, goal_position)
 
         assert agent.goal_position is goal_position, "Goal position should be stored"
-        assert (
-            mock_model.encode.called
-        ), "Model encode should be called when setting goal"
+        assert mock_model.encode.called, "Model encode should be called when setting goal"
         assert agent.objective is not None, "Objective should be set"
         assert agent.planner.objective is not None, "Planner's objective should be set"
 
@@ -318,15 +309,11 @@ def test_main_eval(mock_gc_agent):
     assert "success_rate" in results, "Results should include success rate"
     assert "mean_state_dist" in results, "Results should include mean distance"
     assert isinstance(results["success_rate"], float), "Success rate should be a float"
-    assert isinstance(
-        results["mean_state_dist"], float
-    ), "Mean distance should be a float"
-    assert (
-        mock_env.reset.call_count == 1 + num_episodes
-    ), f"Environment should be reset for each episode but {mock_env.reset.call_count=}"
-    assert (
-        mock_agent_instance.set_goal.call_count == num_episodes
-    ), "Goal should be set for each episode"
+    assert isinstance(results["mean_state_dist"], float), "Mean distance should be a float"
+    assert mock_env.reset.call_count == 1 + num_episodes, (
+        f"Environment should be reset for each episode but {mock_env.reset.call_count=}"
+    )
+    assert mock_agent_instance.set_goal.call_count == num_episodes, "Goal should be set for each episode"
 
 
 def test_planning_integration():
@@ -373,26 +360,24 @@ def test_planning_integration():
     # Create plan config
     from omegaconf import OmegaConf
 
-    plan_cfg = OmegaConf.create(
-        {
-            "planner": {
-                "planner_name": "cem",
-                "n_iters": 3,
-                "num_samples": 10,
-                "plan_length": 4,
-                "num_elites": 2,
-                "var_scale": 1.0,
-                "decode_each_iteration": False,
-                "num_act_stepped": 1,
-                "planning_objective": {
-                    "objective_type": "repr_dist",
-                    "sum_all_diffs": True,
-                },
+    plan_cfg = OmegaConf.create({
+        "planner": {
+            "planner_name": "cem",
+            "n_iters": 3,
+            "num_samples": 10,
+            "plan_length": 4,
+            "num_elites": 2,
+            "var_scale": 1.0,
+            "decode_each_iteration": False,
+            "num_act_stepped": 1,
+            "planning_objective": {
+                "objective_type": "repr_dist",
+                "sum_all_diffs": True,
             },
-            "ctxt_window_time": 2,
-            "logging": {"tqdm_silent": False, "verbose": False},
-        }
-    )
+        },
+        "ctxt_window_time": 2,
+        "logging": {"tqdm_silent": False, "verbose": False},
+    })
 
     # Initialize agent
     agent = GCAgent(

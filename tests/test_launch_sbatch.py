@@ -9,15 +9,11 @@ Tests cover:
 
 import pytest
 
-from eb_jepa.utils.config import (
-    SWEEP_PARAM_ABBREV,
-    _cfg_get,
-)
-from examples.launch_sbatch import (
-    create_wandb_sweep_config,
-    generate_param_combinations,
-    normalize_sweep_name,
-)
+from eb_jepa.utils.config import _cfg_get
+from eb_jepa.utils.config import SWEEP_PARAM_ABBREV
+from examples.launch_sbatch import create_wandb_sweep_config
+from examples.launch_sbatch import generate_param_combinations
+from examples.launch_sbatch import normalize_sweep_name
 
 
 class TestGenerateParamCombinations:
@@ -108,16 +104,11 @@ class TestCreateWandbSweepConfig:
         assert "cost" in params["model"]["parameters"]
         assert "parameters" in params["model"]["parameters"]["cost"]
         assert "loss" in params["model"]["parameters"]["cost"]["parameters"]
-        assert (
-            "parameters" in params["model"]["parameters"]["cost"]["parameters"]["loss"]
-        )
-        assert (
-            "detach_encoder"
-            in params["model"]["parameters"]["cost"]["parameters"]["loss"]["parameters"]
-        )
-        assert params["model"]["parameters"]["cost"]["parameters"]["loss"][
-            "parameters"
-        ]["detach_encoder"] == {"values": [True, False]}
+        assert "parameters" in params["model"]["parameters"]["cost"]["parameters"]["loss"]
+        assert "detach_encoder" in params["model"]["parameters"]["cost"]["parameters"]["loss"]["parameters"]
+        assert params["model"]["parameters"]["cost"]["parameters"]["loss"]["parameters"]["detach_encoder"] == {
+            "values": [True, False]
+        }
 
     def test_method_override(self):
         param_grid = {"meta.seed": [1, 2]}
@@ -157,25 +148,19 @@ class TestSweepParamAbbrev:
     def test_abbreviations_are_short(self):
         """Verify abbreviations are reasonably short (max 9 characters)."""
         for key, abbrev in SWEEP_PARAM_ABBREV.items():
-            assert (
-                len(abbrev) <= 9
-            ), f"Abbreviation '{abbrev}' for '{key}' is too long (max 9 chars)"
+            assert len(abbrev) <= 9, f"Abbreviation '{abbrev}' for '{key}' is too long (max 9 chars)"
 
     def test_abbreviations_are_unique(self):
         """Verify all abbreviations are unique to avoid folder conflicts."""
         abbrevs = list(SWEEP_PARAM_ABBREV.values())
-        assert len(abbrevs) == len(
-            set(abbrevs)
-        ), f"Duplicate abbreviations found: {abbrevs}"
+        assert len(abbrevs) == len(set(abbrevs)), f"Duplicate abbreviations found: {abbrevs}"
 
     def test_abbreviations_are_filesystem_safe(self):
         """Verify abbreviations don't contain problematic characters."""
         unsafe_chars = ["/", "\\", " ", ":", "*", "?", '"', "<", ">", "|", "."]
         for key, abbrev in SWEEP_PARAM_ABBREV.items():
             for char in unsafe_chars:
-                assert (
-                    char not in abbrev
-                ), f"Abbreviation '{abbrev}' for '{key}' contains unsafe char '{char}'"
+                assert char not in abbrev, f"Abbreviation '{abbrev}' for '{key}' contains unsafe char '{char}'"
 
 
 class TestCfgGet:

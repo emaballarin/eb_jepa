@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import json
 import os
 from logging import getLogger
@@ -15,10 +14,9 @@ import torch
 from einops import rearrange
 from scipy.spatial.transform import Rotation as R
 
-from eb_jepa.data.droid_dset import poses_to_diffs
-
 from .traj_dset import TrajDataset
 from .utils import register_dataset
+from eb_jepa.data.droid_dset import poses_to_diffs
 
 logger = getLogger()
 
@@ -107,9 +105,7 @@ class RoboCasaDataset(TrajDataset):
         n_rollout=50,
         transform=None,
         data_path=None,
-        filter_tasks=[
-            "PnPCounterToCab"
-        ],  # Can be a single task name or a list of task names
+        filter_tasks=["PnPCounterToCab"],  # Can be a single task name or a list of task names
         filter_first_episodes=10,
         camera_views=["robot0_agentview_left"],
         normalize_action=True,
@@ -167,9 +163,7 @@ class RoboCasaDataset(TrajDataset):
                         self.file_paths.append(os.path.join(root, file))
 
             if len(self.file_paths) == 0:
-                raise ValueError(
-                    f"No hdf5 files found in custom teleop dataset path: {custom_path}"
-                )
+                raise ValueError(f"No hdf5 files found in custom teleop dataset path: {custom_path}")
 
             logger.info(f"Found {len(self.file_paths)} files in custom teleop dataset")
 
@@ -212,9 +206,7 @@ class RoboCasaDataset(TrajDataset):
 
                 # Find human dataset (outside of mg directory)
                 if self.use_human:
-                    base_task_folder = os.path.join(
-                        data_path, task_type, category, task_name
-                    )
+                    base_task_folder = os.path.join(data_path, task_type, category, task_name)
 
                     human_files = []
 
@@ -230,66 +222,44 @@ class RoboCasaDataset(TrajDataset):
                             # Check for hdf5 files in this date directory
                             for root, _, files in os.walk(item_path):
                                 for file in files:
-                                    if file.endswith(
-                                        "im128_randcams.hdf5"
-                                    ) or file.endswith("im128.hdf5"):
+                                    if file.endswith("im128_randcams.hdf5") or file.endswith("im128.hdf5"):
                                         human_files.append(os.path.join(root, file))
 
                     if human_files:
                         human_files.sort()  # Ensure consistent ordering
                         self.file_paths.extend(human_files)
-                        logger.info(
-                            f"Found {len(human_files)} human files for task {task_name}"
-                        )
+                        logger.info(f"Found {len(human_files)} human files for task {task_name}")
 
                 # Find MimicGen dataset
                 if self.use_mg:
-                    mg_task_folder = os.path.join(
-                        data_path, task_type, category, task_name, "mg"
-                    )
+                    mg_task_folder = os.path.join(data_path, task_type, category, task_name, "mg")
 
                     # Find all MimicGen h5 files for this task
                     mg_files = []
                     if os.path.exists(mg_task_folder):
                         for root, dirs, files in os.walk(mg_task_folder):
                             for file in files:
-                                if file.endswith(
-                                    "im128_randcams.hdf5"
-                                ) or file.endswith("im128.hdf5"):
+                                if file.endswith("im128_randcams.hdf5") or file.endswith("im128.hdf5"):
                                     mg_files.append(os.path.join(root, file))
 
                     if mg_files:
                         mg_files.sort()  # Ensure consistent ordering
                         self.file_paths.extend(mg_files)
-                        logger.info(
-                            f"Found {len(mg_files)} MimicGen files for task {task_name}"
-                        )
+                        logger.info(f"Found {len(mg_files)} MimicGen files for task {task_name}")
 
             if len(self.file_paths) == 0:
-                raise ValueError(
-                    f"No hdf5 files found for any of the specified tasks: {self.filter_tasks}"
-                )
+                raise ValueError(f"No hdf5 files found for any of the specified tasks: {self.filter_tasks}")
 
-        logger.info(
-            f"Total dataset: {len(self.file_paths)} files across {len(self.filter_tasks)} tasks"
-        )
+        logger.info(f"Total dataset: {len(self.file_paths)} files across {len(self.filter_tasks)} tasks")
 
         # Load data from all files
         for file_path in self.file_paths:
             with h5py.File(file_path, "r") as f:
-                env_args = (
-                    json.loads(f["data"].attrs["env_args"])
-                    if "env_args" in f["data"].attrs
-                    else {}
-                )
-                task_name = (
-                    env_args["env_name"] if "env_name" in env_args else "PnPCounterTop"
-                )
+                env_args = json.loads(f["data"].attrs["env_args"]) if "env_args" in f["data"].attrs else {}
+                task_name = env_args["env_name"] if "env_name" in env_args else "PnPCounterTop"
                 demos = list(f["data"].keys())
                 demos_sorted = sorted(demos, key=lambda x: int(x.split("_")[1]))
-                if filter_first_episodes is not None and filter_first_episodes < len(
-                    demos_sorted
-                ):
+                if filter_first_episodes is not None and filter_first_episodes < len(demos_sorted):
                     logger.info(
                         f"Filtering first {filter_first_episodes}/{len(demos_sorted)} episodes from {file_path}"
                     )
@@ -298,27 +268,15 @@ class RoboCasaDataset(TrajDataset):
                     demos_filtered = demos_sorted
                 for demo_key in demos_filtered:
                     demo = f["data"][demo_key]
-                    model_xml = (
-                        demo.attrs["model_file"] if "model_file" in demo.attrs else None
-                    )
-                    ep_meta = (
-                        json.loads(demo.attrs["ep_meta"])
-                        if "ep_meta" in demo.attrs
-                        else None
-                    )
+                    model_xml = demo.attrs["model_file"] if "model_file" in demo.attrs else None
+                    ep_meta = json.loads(demo.attrs["ep_meta"]) if "ep_meta" in demo.attrs else None
                     if "meta_data_info" in demo:
                         meta_data_info = {}
                         for key in demo["meta_data_info"].keys():
-                            meta_data_info[key] = np.array(
-                                demo["meta_data_info"][key][:]
-                            )
+                            meta_data_info[key] = np.array(demo["meta_data_info"][key][:])
                     else:
                         meta_data_info = None
-                    acts = (
-                        demo["actions"][:, :7]
-                        if self.manip_only
-                        else demo["actions"][:]
-                    )
+                    acts = demo["actions"][:, :7] if self.manip_only else demo["actions"][:]
                     if self.with_reward:
                         reward = torch.tensor(demo["rewards"][:]).unsqueeze(1)
                         rewards.append(reward)
@@ -339,32 +297,24 @@ class RoboCasaDataset(TrajDataset):
                         else:
                             proprio = np.zeros((traj_len, 1))
                     else:
-                        logger.info(
-                            f"No 'obs' found in demo, creating dummy observations"
-                        )
-                        proprio = np.zeros(
-                            (traj_len, 7)
-                        )  # Create 7-dim dummy proprio to match DROID format
+                        logger.info(f"No 'obs' found in demo, creating dummy observations")
+                        proprio = np.zeros((traj_len, 7))  # Create 7-dim dummy proprio to match DROID format
 
                     is_mg = "/mg/" in str(file_path)
                     # Store only the metadata, not images
-                    self.trajectories.append(
-                        {
-                            "file_path": file_path,
-                            "demo_key": demo_key,
-                            "task_name": task_name,
-                            "is_mg": is_mg,
-                            "traj_len": traj_len,
-                        }
-                    )
+                    self.trajectories.append({
+                        "file_path": file_path,
+                        "demo_key": demo_key,
+                        "task_name": task_name,
+                        "is_mg": is_mg,
+                        "traj_len": traj_len,
+                    })
                     if self.output_rcasa_info:
-                        self.trajectories[-1].update(
-                            {
-                                "model_xml": model_xml,
-                                "ep_meta": ep_meta,
-                                "meta_data_info": meta_data_info,
-                            }
-                        )
+                        self.trajectories[-1].update({
+                            "model_xml": model_xml,
+                            "ep_meta": ep_meta,
+                            "meta_data_info": meta_data_info,
+                        })
 
                     action_all.append(torch.tensor(acts))
                     proprio_all.append(torch.tensor(proprio))
@@ -455,9 +405,7 @@ class RoboCasaDataset(TrajDataset):
             frames: list or range of frame indices
         """
         trajectory_info = self.trajectories[idx]
-        trajectory = h5py.File(trajectory_info["file_path"], "r")["data"][
-            trajectory_info["demo_key"]
-        ]
+        trajectory = h5py.File(trajectory_info["file_path"], "r")["data"][trajectory_info["demo_key"]]
         if subtask is not None:
             task_segments = trajectory["meta_data_info/current_task_segment"][:]
             required_segments = []
@@ -491,23 +439,15 @@ class RoboCasaDataset(TrajDataset):
                 )
 
             if len(frames) == 0:
-                raise ValueError(
-                    f"No frames match the subtask '{subtask}' in trajectory {idx}"
-                )
+                raise ValueError(f"No frames match the subtask '{subtask}' in trajectory {idx}")
 
         # Handle actions and states regardless of obs presence
         if self.rcasa_to_droid_action_format:
             # We'll need proprio for this, which we'll handle below
             pass
         else:
-            act = torch.tensor(
-                trajectory["actions"][frames, : self.action_dim]
-            )  # [B T 7]
-        state = (
-            torch.tensor(trajectory["states"][frames])
-            if self.output_rcasa_state
-            else None
-        )
+            act = torch.tensor(trajectory["actions"][frames, : self.action_dim])  # [B T 7]
+        state = torch.tensor(trajectory["states"][frames]) if self.output_rcasa_state else None
 
         if "obs" in trajectory:
             obs = trajectory["obs"]

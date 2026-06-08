@@ -2,7 +2,6 @@
 # All rights reserved.
 # The below code is inspired from TD-MPC2 https://github.com/nicklashansen/tdmpc2
 # licensed under the MIT License
-
 from collections import deque
 
 import gym
@@ -41,9 +40,7 @@ class PixelWrapper(gym.Wrapper):
         self._render_size = render_size
 
     def _get_obs(self):
-        frame = self.env.render(
-            mode="rgb_array", width=self._render_size, height=self._render_size
-        )  # H, W, C
+        frame = self.env.render(mode="rgb_array", width=self._render_size, height=self._render_size)  # H, W, C
         frame = frame.transpose(2, 0, 1)  # H, W, C -> C, H, W
         self._frames.append(frame)
         if self.cfg.task_specification.obs_concat_channels:

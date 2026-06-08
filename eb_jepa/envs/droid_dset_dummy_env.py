@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import gym
 import numpy as np
 
@@ -36,15 +35,11 @@ class DroidDummyWrapper(gym.Wrapper):
         self.cfg = cfg
         img_size = 224
         if cfg is not None:
-            img_size = getattr(
-                getattr(cfg, "task_specification", None), "img_size", 224
-            )
+            img_size = getattr(getattr(cfg, "task_specification", None), "img_size", 224)
         self.env.width = img_size
         self.env.height = img_size
         self.action_dim = 7
-        self.action_space = gym.spaces.Box(
-            low=-1.0, high=1.0, shape=(self.action_dim,), dtype=np.float32
-        )
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(self.action_dim,), dtype=np.float32)
         self.n_allowed_steps = 1
 
     def reset(self, **kwargs):
@@ -81,9 +76,7 @@ class DroidDummyWrapper(gym.Wrapper):
         return self.env.unwrapped
 
     def render(self, *args, **kwargs):
-        return np.random.normal(
-            size=(self.env.height, self.env.width, 3)
-        )  # flip vertically
+        return np.random.normal(size=(self.env.height, self.env.width, 3))  # flip vertically
 
 
 def make_env(cfg, env_cls=None):

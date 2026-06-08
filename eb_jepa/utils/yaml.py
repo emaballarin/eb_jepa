@@ -33,10 +33,7 @@ def expand_env_vars(value, _path: str = ""):
                 fallback_var = _ENV_FALLBACKS[var_name]
                 env_value = os.environ.get(fallback_var)
                 if env_value is not None:
-                    logger.info(
-                        f"'{var_name}' not set, falling back to "
-                        f"'{fallback_var}'='{env_value}'"
-                    )
+                    logger.info(f"'{var_name}' not set, falling back to '{fallback_var}'='{env_value}'")
             if env_value is None:
                 logger.warning(
                     f"Environment variable '{var_name}' not found"
@@ -44,18 +41,12 @@ def expand_env_vars(value, _path: str = ""):
                     f"Keeping original placeholder: {match.group(0)}"
                 )
                 return match.group(0)
-            logger.info(
-                f"Expanded environment variable '{var_name}' to '{env_value}'"
-                f"{' at ' + _path if _path else ''}"
-            )
+            logger.info(f"Expanded environment variable '{var_name}' to '{env_value}'{' at ' + _path if _path else ''}")
             return env_value
 
         return re.sub(pattern, _replace, value)
     elif isinstance(value, dict):
-        return {
-            k: expand_env_vars(v, f"{_path}.{k}" if _path else k)
-            for k, v in value.items()
-        }
+        return {k: expand_env_vars(v, f"{_path}.{k}" if _path else k) for k, v in value.items()}
     elif isinstance(value, list):
         return [expand_env_vars(item, f"{_path}[{i}]") for i, item in enumerate(value)]
     return value

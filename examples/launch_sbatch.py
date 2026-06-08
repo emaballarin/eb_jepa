@@ -252,7 +252,7 @@ def print_submission_summary(jobs: list, logs_dir, extra_info: dict | None = Non
     """Print a compact summary of batch job submission."""
     job_ids = [job.job_id for job in jobs]
     batch_id = job_ids[0].split("_")[0] if "_" in job_ids[0] else job_ids[0]
-    print(f"\n✓ Submitted {len(jobs)} jobs (batch {batch_id}_[0-{len(jobs)-1}])")
+    print(f"\n✓ Submitted {len(jobs)} jobs (batch {batch_id}_[0-{len(jobs) - 1}])")
     print(f"  Logs: {logs_dir}")
     if extra_info:
         for key, value in extra_info.items():
@@ -274,9 +274,7 @@ def run_experiment(example_name: str, cfg, folder=None, gpus: int = 1):
     """
     print(f"Current working directory: {os.getcwd()}")
     print(f"EBJEPA_DSETS: {os.environ.get('EBJEPA_DSETS', 'not set')}")
-    print(
-        f"EBJEPA_DATA: {os.environ.get('EBJEPA_DATA', 'not set (using EBJEPA_DSETS)')}"
-    )
+    print(f"EBJEPA_DATA: {os.environ.get('EBJEPA_DATA', 'not set (using EBJEPA_DSETS)')}")
 
     module = importlib.import_module(EXAMPLE_CONFIGS[example_name]["module"])
     return module.run(cfg=cfg, folder=folder)
@@ -345,9 +343,7 @@ def create_wandb_sweep_config(param_grid: dict, metric: str, method: str = "grid
     """
     normalized_grid = {}
     for param_name, param_values in param_grid.items():
-        if hasattr(param_values, "__iter__") and not isinstance(
-            param_values, (str, dict)
-        ):
+        if hasattr(param_values, "__iter__") and not isinstance(param_values, (str, dict)):
             normalized_grid[param_name] = {"values": list(param_values)}
         elif isinstance(param_values, dict):
             normalized_grid[param_name] = param_values
@@ -395,9 +391,7 @@ def launch_sweep(
         sweep_config = create_wandb_sweep_config(param_grid, metric, wandb_method)
         sweep_id = wandb.sweep(sweep_config, project=project_name)
         print(f"Created wandb sweep with ID: {sweep_id}")
-        print(
-            f"View sweep at: https://wandb.ai/{wandb.api.default_entity}/{project_name}/sweeps/{sweep_id}"
-        )
+        print(f"View sweep at: https://wandb.ai/{wandb.api.default_entity}/{project_name}/sweeps/{sweep_id}")
 
     # Setup environment (must happen before chdir)
     base_cfg = load_config(fname, {}, quiet=True)
@@ -432,13 +426,11 @@ def launch_sweep(
 
             # Add wandb-specific overrides
             if use_wandb:
-                final_overrides.update(
-                    {
-                        "logging.wandb_sweep": True,
-                        "logging.wandb_sweep_id": sweep_id,
-                        "logging.wandb_group": sweep_name,
-                    }
-                )
+                final_overrides.update({
+                    "logging.wandb_sweep": True,
+                    "logging.wandb_sweep_id": sweep_id,
+                    "logging.wandb_group": sweep_name,
+                })
 
             cfg = load_config(fname, final_overrides, quiet=True)
             exp_name = get_exp_name(example_name, cfg, param_grid)
@@ -562,9 +554,7 @@ def launch_eval_sweep(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Unified SLURM launcher for EB-JEPA examples"
-    )
+    parser = argparse.ArgumentParser(description="Unified SLURM launcher for EB-JEPA examples")
     parser.add_argument(
         "--example",
         type=str,
@@ -711,9 +701,7 @@ if __name__ == "__main__":
         "slurm_account",
         "slurm_mem_per_gpu",
     }
-    overrides = {
-        k: v for k, v in vars(args).items() if v is not None and k not in excluded_keys
-    }
+    overrides = {k: v for k, v in vars(args).items() if v is not None and k not in excluded_keys}
 
     # Parse unknown args as additional config overrides (e.g., --data.batch_size 64)
     i = 0

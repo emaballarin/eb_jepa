@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import numpy as np
 
 EMPTY = 110
@@ -66,7 +65,7 @@ def spec_from_sparse_locations(w, h, tile_to_locs):
 
 def local_spec(map, xpnt):
     """
-    >>> local_spec("yOy\\\\Oxy", xpnt=(5,5))
+    >>> local_spec("yOy\\\\Oxy", xpnt=(5, 5))
     array([[4, 4],
            [6, 4],
            [6, 5]])
@@ -115,10 +114,7 @@ class GridSpec(object):
             np.array([-1, 0]),
             np.array([1, 0]),
         ]
-        neighbors = [
-            self[k + offset] if (not self.out_of_bounds(k + offset)) else OUT_OF_BOUNDS
-            for offset in offsets
-        ]
+        neighbors = [self[k + offset] if (not self.out_of_bounds(k + offset)) else OUT_OF_BOUNDS for offset in offsets]
         return neighbors
 
     def get_value(self, k, xy=False):

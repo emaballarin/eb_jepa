@@ -1,9 +1,12 @@
 import abc
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import List
+from typing import Optional
 
 import torch
 from einops import rearrange
-from torch import default_generator, randperm
+from torch import default_generator
+from torch import randperm
 from torch.utils.data import Dataset
 
 
@@ -84,9 +87,7 @@ class TrajDataset(Dataset, abc.ABC):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def compute_mean_std(
-        data: torch.Tensor, traj_lengths: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def compute_mean_std(data: torch.Tensor, traj_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute per-feature mean/std over variable-length trajectories.
 
         Args:
@@ -187,8 +188,7 @@ class TrajSlicerDataset(TrajDataset):
                 print(f"Ignored short sequence #{i}: len={T}, num_frames={num_frames}")
             else:
                 self.slices += [
-                    (i, start, start + num_frames * self.frameskip)
-                    for start in range(T - num_frames * frameskip + 1)
+                    (i, start, start + num_frames * self.frameskip) for start in range(T - num_frames * frameskip + 1)
                 ]  # slice indices follow convention [start, end)
         # randomly permute the slices
         order = torch.randperm(len(self.slices), generator=generator).tolist()
@@ -198,9 +198,7 @@ class TrajSlicerDataset(TrajDataset):
             if self.frameskip < self.action_skip:
                 self.action_dim = self.dataset.action_dim
             else:
-                self.action_dim = self.dataset.action_dim * (
-                    self.frameskip // self.action_skip
-                )
+                self.action_dim = self.dataset.action_dim * (self.frameskip // self.action_skip)
         else:
             self.action_dim = self.dataset.action_dim
 
@@ -241,9 +239,7 @@ class TrajSlicerDataset(TrajDataset):
             )
         else:
             if self.process_actions == "concat":
-                act = rearrange(
-                    act, "(n f) d -> n (f d)", n=self.num_frames
-                )  # concat actions
+                act = rearrange(act, "(n f) d -> n (f d)", n=self.num_frames)  # concat actions
             elif self.process_actions == "sum":
                 act = rearrange(act, "(n f) d -> n f d", n=self.num_frames)
                 act = act.sum(dim=1)  # Sum along the frame dimension
@@ -257,9 +253,7 @@ def random_split_traj(
     traj_subset: bool = True,
 ) -> List[TrajSubset]:
     if sum(lengths) != len(dataset):  # type: ignore[arg-type]
-        raise ValueError(
-            "Sum of input lengths does not equal the length of the input dataset!"
-        )
+        raise ValueError("Sum of input lengths does not equal the length of the input dataset!")
 
     indices = randperm(sum(lengths), generator=generator).tolist()
     if traj_subset:

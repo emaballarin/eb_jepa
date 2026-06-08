@@ -1,4 +1,6 @@
-from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import LinearLR
+from torch.optim.lr_scheduler import SequentialLR
 
 
 class CosineWithWarmup:
@@ -10,9 +12,7 @@ class CosineWithWarmup:
     down to a minimum learning rate over the remaining training steps.
     """
 
-    def __init__(
-        self, optimizer, total_steps, warmup_ratio=0.1, min_lr=1e-5, last_epoch=-1
-    ):
+    def __init__(self, optimizer, total_steps, warmup_ratio=0.1, min_lr=1e-5, last_epoch=-1):
         """
         Args:
             optimizer (Optimizer): Wrapped optimizer.
@@ -28,14 +28,10 @@ class CosineWithWarmup:
         self.warmup_steps = int(warmup_ratio * total_steps)
         self.cosine_steps = total_steps - self.warmup_steps
 
-        warmup = LinearLR(
-            optimizer, start_factor=1e-8, end_factor=1.0, total_iters=self.warmup_steps
-        )
+        warmup = LinearLR(optimizer, start_factor=1e-8, end_factor=1.0, total_iters=self.warmup_steps)
         cosine = CosineAnnealingLR(optimizer, T_max=self.cosine_steps, eta_min=min_lr)
 
-        self.scheduler = SequentialLR(
-            optimizer, schedulers=[warmup, cosine], milestones=[self.warmup_steps]
-        )
+        self.scheduler = SequentialLR(optimizer, schedulers=[warmup, cosine], milestones=[self.warmup_steps])
 
     def step(self):
         self.scheduler.step()

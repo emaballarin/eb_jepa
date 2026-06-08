@@ -105,18 +105,12 @@ def collect_results(model_folders: list[Path], manifest: pd.DataFrame) -> pd.Dat
     """Scan eval.csv files on disk and join with manifest hyperparameters."""
     rows = []
     for model_folder in model_folders:
-        seed = (
-            model_folder.name.rsplit("_seed", 1)[-1]
-            if "_seed" in model_folder.name
-            else "unknown"
-        )
+        seed = model_folder.name.rsplit("_seed", 1)[-1] if "_seed" in model_folder.name else "unknown"
         for _, mrow in manifest.iterrows():
             eval_base = model_folder / "plan_eval" / mrow["eval_tag"]
             if not eval_base.is_dir():
                 continue
-            csvs = sorted(eval_base.glob("step-*/eval.csv")) + sorted(
-                eval_base.glob("step-*_eval_only/eval.csv")
-            )
+            csvs = sorted(eval_base.glob("step-*/eval.csv")) + sorted(eval_base.glob("step-*_eval_only/eval.csv"))
             if not csvs:
                 continue
             try:
@@ -157,15 +151,14 @@ def compute_importance(df: pd.DataFrame, hparam_cols: list[str]) -> pd.DataFrame
     mi = mutual_info_regression(X, y, random_state=42, n_neighbors=5)
 
     return (
-        pd.DataFrame(
-            {
-                "Hyperparameter": hparam_cols,
-                "RF Importance": rf.feature_importances_,
-                "Permutation Importance": perm.importances_mean,
-                "Perm. Imp. Std": perm.importances_std,
-                "Mutual Information": mi,
-            }
-        )
+        pd
+        .DataFrame({
+            "Hyperparameter": hparam_cols,
+            "RF Importance": rf.feature_importances_,
+            "Permutation Importance": perm.importances_mean,
+            "Perm. Imp. Std": perm.importances_std,
+            "Mutual Information": mi,
+        })
         .sort_values("Permutation Importance", ascending=False)
         .reset_index(drop=True)
     )
@@ -183,11 +176,7 @@ def compute_correlations(df: pd.DataFrame, hparam_cols: list[str]) -> pd.DataFra
             rho, pval = spearmanr(vals[valid], df[METRIC].values[valid])
         rows.append({"Hyperparameter": col, "Spearman rho": rho, "p-value": pval})
 
-    return (
-        pd.DataFrame(rows)
-        .sort_values("Spearman rho", key=abs, ascending=False)
-        .reset_index(drop=True)
-    )
+    return pd.DataFrame(rows).sort_values("Spearman rho", key=abs, ascending=False).reset_index(drop=True)
 
 
 def plot_importance_and_correlation(
@@ -221,11 +210,7 @@ def plot_importance_and_correlation(
     )
     for i, (_, row) in enumerate(corr.iterrows()):
         p = row["p-value"]
-        marker = (
-            ""
-            if np.isnan(p) or p >= 0.05
-            else ("***" if p < 0.001 else "**" if p < 0.01 else "*")
-        )
+        marker = "" if np.isnan(p) or p >= 0.05 else ("***" if p < 0.001 else "**" if p < 0.01 else "*")
         if marker:
             axes[1].text(
                 row["Spearman rho"] + 0.01 * np.sign(row["Spearman rho"]),
@@ -237,9 +222,7 @@ def plot_importance_and_correlation(
             )
     axes[1].axvline(0, color="black", linewidth=0.8, linestyle="--")
     axes[1].set_xlabel("Spearman Correlation (rho)")
-    axes[1].set_title(
-        "Correlation with success_rate\n(* p<0.05, ** p<0.01, *** p<0.001)"
-    )
+    axes[1].set_title("Correlation with success_rate\n(* p<0.05, ** p<0.01, *** p<0.001)")
 
     plt.tight_layout()
     _savefig(fig, output_path)
@@ -318,10 +301,7 @@ def plot_pareto(
             labelling Pareto-optimal points).
         output_path: Where to save the PDF figure.
     """
-    if (
-        "mean_avg_episode_time" not in agg.columns
-        or agg["mean_avg_episode_time"].isna().all()
-    ):
+    if "mean_avg_episode_time" not in agg.columns or agg["mean_avg_episode_time"].isna().all():
         logger.warning("mean_avg_episode_time missing or all NaN; skipping Pareto plot")
         return
 
@@ -373,9 +353,7 @@ def plot_pareto(
 
         ax.set_xlabel("Avg Episode Time (s)")
         ax.set_ylabel("Success Rate")
-        ax.set_title(
-            "Pareto Front: Success Rate vs Avg Episode Time", fontweight="bold"
-        )
+        ax.set_title("Pareto Front: Success Rate vs Avg Episode Time", fontweight="bold")
         ax.legend(frameon=True, fancybox=True, shadow=True)
         sns.despine(ax=ax, left=True, bottom=True)
     _savefig(fig, output_path)
@@ -397,9 +375,7 @@ def _level_aware_filter(df: pd.DataFrame, active_hparams: list[str]) -> pd.DataF
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Analyze planning hyperparameter sweep results"
-    )
+    parser = argparse.ArgumentParser(description="Analyze planning hyperparameter sweep results")
     parser.add_argument(
         "--model-folder",
         type=str,
@@ -411,8 +387,7 @@ def main():
         type=str,
         nargs="+",
         required=True,
-        help="Path(s) to sweep_manifest.csv. Multiple manifests are "
-        "concatenated (requires --output-dir).",
+        help="Path(s) to sweep_manifest.csv. Multiple manifests are concatenated (requires --output-dir).",
     )
     parser.add_argument(
         "--seeds",
@@ -427,14 +402,10 @@ def main():
         default=None,
         help="Output directory (default: manifest parent dir)",
     )
-    parser.add_argument(
-        "--top-n", type=int, default=10, help="Number of top configurations to display"
-    )
+    parser.add_argument("--top-n", type=int, default=10, help="Number of top configurations to display")
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     manifest_paths = [Path(m) for m in args.manifest]
     for mp in manifest_paths:
@@ -451,9 +422,7 @@ def main():
         print(f"Manifest: {mp} ({len(mdf)} configurations)")
     manifest = pd.concat(dfs, ignore_index=True)
     if len(manifest_paths) > 1:
-        print(
-            f"Combined: {len(manifest)} configurations from {len(manifest_paths)} manifests"
-        )
+        print(f"Combined: {len(manifest)} configurations from {len(manifest_paths)} manifests")
 
     base = args.model_folder
     if args.seeds:
@@ -480,9 +449,7 @@ def main():
     print(f"\nCollected {len(df)} eval results")
 
     all_hparam_cols = [c for c in manifest.columns if c not in NON_HPARAM_COLS]
-    active_hparams = [
-        c for c in all_hparam_cols if c in df.columns and df[c].dropna().nunique() > 1
-    ]
+    active_hparams = [c for c in all_hparam_cols if c in df.columns and df[c].dropna().nunique() > 1]
     print(f"Active planning hyperparameters: {active_hparams}\n")
     if not active_hparams:
         print("No varying hyperparameters found. Nothing to analyze.")
@@ -491,20 +458,11 @@ def main():
     df_analysis = _level_aware_filter(df, active_hparams)
 
     # Aggregate over seeds
-    agg_metrics = [METRIC] + (
-        [c for c in ["avg_episode_time"] if c in df_analysis.columns]
-    )
+    agg_metrics = [METRIC] + ([c for c in ["avg_episode_time"] if c in df_analysis.columns])
     for col in agg_metrics:
         df_analysis[col] = pd.to_numeric(df_analysis[col], errors="coerce")
-    agg = (
-        df_analysis.groupby(active_hparams, dropna=False)[agg_metrics]
-        .agg(["mean", "std", "count"])
-        .reset_index()
-    )
-    agg.columns = [
-        f"{stat}_{col}" if stat in ("mean", "std", "count") else col
-        for col, stat in agg.columns
-    ]
+    agg = df_analysis.groupby(active_hparams, dropna=False)[agg_metrics].agg(["mean", "std", "count"]).reset_index()
+    agg.columns = [f"{stat}_{col}" if stat in ("mean", "std", "count") else col for col, stat in agg.columns]
     count_cols = [c for c in agg.columns if c.startswith("count_")]
     if count_cols:
         agg.rename(columns={count_cols[0]: "count"}, inplace=True)
@@ -545,9 +503,7 @@ def main():
     df.to_csv(output_dir / "all_runs.csv", index=False)
     print(f"Saved CSVs to {output_dir}/")
 
-    plot_importance_and_correlation(
-        importance_df, corr_df, output_dir / "hparam_importance.pdf"
-    )
+    plot_importance_and_correlation(importance_df, corr_df, output_dir / "hparam_importance.pdf")
     plot_violins(df_analysis, active_hparams, output_dir / "hparam_violins.pdf")
     if "mean_avg_episode_time" in agg.columns:
         plot_pareto(agg, active_hparams, output_dir / "pareto_front.pdf")

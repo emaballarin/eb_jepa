@@ -1,4 +1,9 @@
-from typing import Callable, Dict, List, Literal, Optional, Union
+from collections.abc import Callable
+from typing import Dict
+from typing import List
+from typing import Literal
+from typing import Optional
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -181,11 +186,7 @@ class HierarchicalObjective:
         This is the maximum level in level_objectives, which may be less than
         num_levels if start_level < num_levels.
         """
-        return (
-            max(self.level_objectives.keys())
-            if self.level_objectives
-            else self.num_levels
-        )
+        return max(self.level_objectives.keys()) if self.level_objectives else self.num_levels
 
     def set_level(self, level: int):
         """Set the current level for planning.
@@ -208,9 +209,7 @@ class HierarchicalObjective:
         """Clear all subgoals (call when starting a new planning episode)."""
         self._subgoals = {}
 
-    def _encode_to_parent_level(
-        self, encodings: torch.Tensor, level: int
-    ) -> torch.Tensor:
+    def _encode_to_parent_level(self, encodings: torch.Tensor, level: int) -> torch.Tensor:
         """Encode predictions from level ℓ to level ℓ+1 space.
 
         This projects predictions from a finer level to the next coarser level
@@ -224,9 +223,7 @@ class HierarchicalObjective:
             Encodings in level ℓ+1 space [B, D_{ℓ+1}, T', H_{ℓ+1}, W_{ℓ+1}].
         """
         if level >= self.num_levels:
-            raise ValueError(
-                f"Cannot encode level {level} to parent (max level is {self.num_levels})"
-            )
+            raise ValueError(f"Cannot encode level {level} to parent (max level is {self.num_levels})")
 
         stride = self.model.temporal_strides[level - 1]
         encodings_strided = encodings[:, :, ::stride]
@@ -237,9 +234,7 @@ class HierarchicalObjective:
 
         return encodings_next
 
-    def _make_subgoal_objective(
-        self, parent_obj: Callable, subgoal: torch.Tensor
-    ) -> Callable:
+    def _make_subgoal_objective(self, parent_obj: Callable, subgoal: torch.Tensor) -> Callable:
         """Create a temporary objective for subgoal comparison.
 
         Uses the same class and distance/sum_all_diffs parameters as the
@@ -269,9 +264,7 @@ class HierarchicalObjective:
                 sum_all_diffs=sum_all_diffs,
             )
         else:
-            raise NotImplementedError(
-                f"Subgoal objective creation not implemented for {type(parent_obj)}"
-            )
+            raise NotImplementedError(f"Subgoal objective creation not implemented for {type(parent_obj)}")
 
     def __call__(
         self,
@@ -313,8 +306,6 @@ class HierarchicalObjective:
 
         return self.subgoal_weight * subgoal_cost + self.goal_weight * goal_cost
 
-    def compute_at_level(
-        self, encodings: torch.Tensor, level: int, keepdims: bool = False
-    ) -> torch.Tensor:
+    def compute_at_level(self, encodings: torch.Tensor, level: int, keepdims: bool = False) -> torch.Tensor:
         """Convenience method to compute objective at a specific level."""
         return self(encodings, level=level, keepdims=keepdims)

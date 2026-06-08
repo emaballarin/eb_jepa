@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 """A pointmass maze env.
 
 Ported from legacy mujoco-py / d4rl to modern ``mujoco`` (>=3.x).  The
@@ -49,9 +48,7 @@ def point_maze(maze_str):
 
     mjcmodel = MJCModel("point_maze")
     mjcmodel.root.compiler(inertiafromgeom="true", angle="radian", coordinate="local")
-    mjcmodel.root.option(
-        timestep="0.01", gravity="0 0 0", iterations="20", integrator="Euler"
-    )
+    mjcmodel.root.option(timestep="0.01", gravity="0 0 0", iterations="20", integrator="Euler")
     default = mjcmodel.root.default()
     default.joint(damping=1, limited="false")
     default.geom(
@@ -105,12 +102,8 @@ def point_maze(maze_str):
     )
 
     particle = worldbody.body(name="particle", pos=[1.2, 1.2, 0])
-    particle.geom(
-        name="particle_geom", type="sphere", size=0.1, rgba="0.0 0.0 1.0 0.0", contype=1
-    )
-    particle.site(
-        name="particle_site", pos=[0.0, 0.0, 0], size=0.2, rgba="0.3 0.6 0.3 1"
-    )
+    particle.geom(name="particle_geom", type="sphere", size=0.1, rgba="0.0 0.0 1.0 0.0", contype=1)
+    particle.site(name="particle_site", pos=[0.0, 0.0, 0], size=0.2, rgba="0.3 0.6 0.3 1")
     particle.joint(name="ball_x", type="slide", pos=[0, 0, 0], axis=[1, 0, 0])
     particle.joint(name="ball_y", type="slide", pos=[0, 0, 0], axis=[0, 1, 0])
 
@@ -161,25 +154,11 @@ LARGE_MAZE_EVAL = (
 )
 
 MEDIUM_MAZE = (
-    "########\\"
-    + "#OO##OO#\\"
-    + "#OO#OOO#\\"
-    + "##OOO###\\"
-    + "#OO#OOO#\\"
-    + "#O#OO#O#\\"
-    + "#OOO#OG#\\"
-    + "########"
+    "########\\" + "#OO##OO#\\" + "#OO#OOO#\\" + "##OOO###\\" + "#OO#OOO#\\" + "#O#OO#O#\\" + "#OOO#OG#\\" + "########"
 )
 
 MEDIUM_MAZE_EVAL = (
-    "########\\"
-    + "#OOOOOG#\\"
-    + "#O#O##O#\\"
-    + "#OOOO#O#\\"
-    + "###OO###\\"
-    + "#OOOOOO#\\"
-    + "#OO##OO#\\"
-    + "########"
+    "########\\" + "#OOOOOG#\\" + "#O#O##O#\\" + "#OOOO#O#\\" + "###OO###\\" + "#OOOOOO#\\" + "#OO##OO#\\" + "########"
 )
 
 SMALL_MAZE = "######\\" + "#OOOO#\\" + "#O##O#\\" + "#OOOO#\\" + "######"
@@ -191,16 +170,14 @@ U_MAZE_EVAL = "#####\\" + "#OOG#\\" + "#O###\\" + "#OOO#\\" + "#####"
 OPEN = "#######\\" + "#OOOOO#\\" + "#OOGOO#\\" + "#OOOOO#\\" + "#######"
 
 
-STATE_RANGES = np.array(
-    [
-        [0.39318362, 3.2198412],  # Range for first dimension
-        [0.62660956, 3.2187355],  # Range for second dimension
-        [-5.2262554, 5.2262554],  # Range for third dimension
-        [-5.2262554, 5.2262554],  # Range for fourth dimension
-        [0.90001136, 3.0999563],  # Range for first dimension of target
-        [0.9000267, 3.0999668],  # Range for second dimension of target
-    ]
-)
+STATE_RANGES = np.array([
+    [0.39318362, 3.2198412],  # Range for first dimension
+    [0.62660956, 3.2187355],  # Range for second dimension
+    [-5.2262554, 5.2262554],  # Range for third dimension
+    [-5.2262554, 5.2262554],  # Range for fourth dimension
+    [0.90001136, 3.0999563],  # Range for first dimension of target
+    [0.9000267, 3.0999668],  # Range for second dimension of target
+])
 
 OFF_TARGET = np.array([10, 10])
 
@@ -258,16 +235,12 @@ class MazeEnv(gym.Env, utils.EzPickle):
         obs_size = self.mj_model.nq + self.mj_model.nv  # qpos + qvel
         obs_high = np.inf * np.ones(obs_size)
         self.observation_space = spaces.Box(-obs_high, obs_high, dtype=np.float32)
-        self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(self.mj_model.nu,), dtype=np.float32
-        )
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.mj_model.nu,), dtype=np.float32)
 
         utils.EzPickle.__init__(self)
 
         if self.return_value == "obs":
-            self.observation_space = gym.spaces.Box(
-                low=0, high=255, shape=(224, 224, 3), dtype=np.uint8
-            )
+            self.observation_space = gym.spaces.Box(low=0, high=255, shape=(224, 224, 3), dtype=np.uint8)
 
         self._renderer = None
 
@@ -277,9 +250,7 @@ class MazeEnv(gym.Env, utils.EzPickle):
         elif len(self.goal_locations) > 1:
             raise ValueError("More than 1 goal specified!")
         else:
-            self.set_target(
-                np.array(self.reset_locations[0]).astype(self.observation_space.dtype)
-            )
+            self.set_target(np.array(self.reset_locations[0]).astype(self.observation_space.dtype))
         self.empty_and_goal_locations = self.reset_locations + self.goal_locations
 
         self.seed()
@@ -287,11 +258,7 @@ class MazeEnv(gym.Env, utils.EzPickle):
 
     def _get_renderer(self, width=224, height=224):
         """Lazily create or recreate the offscreen renderer."""
-        if (
-            self._renderer is None
-            or self._render_w != width
-            or self._render_h != height
-        ):
+        if self._renderer is None or self._render_w != width or self._render_h != height:
             if self._renderer is not None:
                 self._renderer.close()
             self._renderer = mujoco.Renderer(self.mj_model, height=height, width=width)
@@ -345,12 +312,8 @@ class MazeEnv(gym.Env, utils.EzPickle):
 
     def _get_obs(self):
         obs = {
-            "visual": np.concatenate([self.data.qpos, self.data.qvel])
-            .ravel()
-            .astype(np.float32),
-            "proprio": np.concatenate([self.data.qpos, self.data.qvel])
-            .ravel()
-            .astype(np.float32),
+            "visual": np.concatenate([self.data.qpos, self.data.qvel]).ravel().astype(np.float32),
+            "proprio": np.concatenate([self.data.qpos, self.data.qvel]).ravel().astype(np.float32),
         }
         return obs
 
@@ -360,23 +323,15 @@ class MazeEnv(gym.Env, utils.EzPickle):
     def set_target(self, target_location=None):
         if target_location is None:
             idx = self.np_random.choice(len(self.empty_and_goal_locations))
-            reset_location = np.array(self.empty_and_goal_locations[idx]).astype(
-                self.observation_space.dtype
-            )
-            target_location = reset_location + self.np_random.uniform(
-                low=-0.1, high=0.1, size=self.mj_model.nq
-            )
+            reset_location = np.array(self.empty_and_goal_locations[idx]).astype(self.observation_space.dtype)
+            target_location = reset_location + self.np_random.uniform(low=-0.1, high=0.1, size=self.mj_model.nq)
         self._target = target_location
 
     def set_marker(self):
         if not self.with_target:
             self.set_target(OFF_TARGET)
-        site_id = mujoco.mj_name2id(
-            self.mj_model, mujoco.mjtObj.mjOBJ_SITE, "target_site"
-        )
-        self.data.site_xpos[site_id] = np.array(
-            [self._target[0] + 1, self._target[1] + 1, 0.0]
-        )
+        site_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_SITE, "target_site")
+        self.data.site_xpos[site_id] = np.array([self._target[0] + 1, self._target[1] + 1, 0.0])
 
     def clip_velocity(self):
         qvel = np.clip(self.data.qvel, -5.0, 5.0)
@@ -384,12 +339,8 @@ class MazeEnv(gym.Env, utils.EzPickle):
 
     def reset_model(self):
         idx = self.np_random.choice(len(self.empty_and_goal_locations))
-        reset_location = np.array(self.empty_and_goal_locations[idx]).astype(
-            self.observation_space.dtype
-        )
-        qpos = reset_location + self.np_random.uniform(
-            low=-0.1, high=0.1, size=self.mj_model.nq
-        )
+        reset_location = np.array(self.empty_and_goal_locations[idx]).astype(self.observation_space.dtype)
+        qpos = reset_location + self.np_random.uniform(low=-0.1, high=0.1, size=self.mj_model.nq)
         qvel = self.init_qvel + self.np_random.randn(self.mj_model.nv) * 0.1
         self.set_state(qpos, qvel)
         if self.reset_target:
@@ -399,9 +350,7 @@ class MazeEnv(gym.Env, utils.EzPickle):
     def reset_to_location(self, location):
         mujoco.mj_resetData(self.mj_model, self.data)
         reset_location = np.array(location).astype(self.observation_space.dtype)
-        qpos = reset_location + self.np_random.uniform(
-            low=-0.1, high=0.1, size=self.mj_model.nq
-        )
+        qpos = reset_location + self.np_random.uniform(low=-0.1, high=0.1, size=self.mj_model.nq)
         qvel = self.init_qvel + self.np_random.randn(self.mj_model.nv) * 0.1
         self.set_state(qpos, qvel)
         return self._get_obs()
@@ -421,16 +370,14 @@ class MazeEnv(gym.Env, utils.EzPickle):
         state = self.reset_to_state
         if state is None:
             rs = self.random_state
-            state = np.array(
-                [
-                    rs.uniform(low=STATE_RANGES[0][0], high=STATE_RANGES[0][1]),
-                    rs.uniform(low=STATE_RANGES[1][0], high=STATE_RANGES[1][1]),
-                    rs.uniform(low=STATE_RANGES[2][0], high=STATE_RANGES[2][1]),
-                    rs.uniform(low=STATE_RANGES[3][0], high=STATE_RANGES[3][1]),
-                    rs.uniform(low=STATE_RANGES[4][0], high=STATE_RANGES[4][1]),
-                    rs.uniform(low=STATE_RANGES[5][0], high=STATE_RANGES[5][1]),
-                ]
-            )
+            state = np.array([
+                rs.uniform(low=STATE_RANGES[0][0], high=STATE_RANGES[0][1]),
+                rs.uniform(low=STATE_RANGES[1][0], high=STATE_RANGES[1][1]),
+                rs.uniform(low=STATE_RANGES[2][0], high=STATE_RANGES[2][1]),
+                rs.uniform(low=STATE_RANGES[3][0], high=STATE_RANGES[3][1]),
+                rs.uniform(low=STATE_RANGES[4][0], high=STATE_RANGES[4][1]),
+                rs.uniform(low=STATE_RANGES[5][0], high=STATE_RANGES[5][1]),
+            ])
         qpos, qvel = state[:2], state[2:4]
         self.set_state(qpos, qvel)
         self.set_marker()

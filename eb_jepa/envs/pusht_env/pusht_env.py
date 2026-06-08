@@ -1,16 +1,18 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 # env import
 import collections
-from typing import Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Dict
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 import cv2
 import gym
 import numpy as np
 import pygame
-import pymunk
 import pymunk.pygame_util
 import shapely.geometry as sg
 import skimage.transform as st
@@ -120,9 +122,7 @@ class PymunkKeypointManager:
 
             tf_img_obj = cls.get_tf_img_obj(obj)
             xy_img = np.moveaxis(np.array(np.indices((512, 512))), 0, -1)[:, :, ::-1]
-            local_coord_img = tf_img_obj.inverse(xy_img.reshape(-1, 2)).reshape(
-                xy_img.shape
-            )
+            local_coord_img = tf_img_obj.inverse(xy_img.reshape(-1, 2)).reshape(xy_img.shape)
             obj_local_coords = local_coord_img[obj_mask]
 
             # furthest point sampling
@@ -147,9 +147,7 @@ class PymunkKeypointManager:
         pose = tuple(obj.position) + (obj.angle,)
         return cls.get_tf_img(pose)
 
-    def get_keypoints_global(
-        self, pose_map: Dict[set, Union[Sequence, pymunk.Body]], is_obj=False
-    ):
+    def get_keypoints_global(self, pose_map: Dict[set, Union[Sequence, pymunk.Body]], is_obj=False):
         kp_map = dict()
         for key, value in pose_map.items():
             if is_obj:
@@ -182,7 +180,7 @@ class DrawOptions(pymunk.SpaceDebugDrawOptions):
         Typical usage::
 
         >>> import pymunk
-        >>> surface = pygame.Surface((10,10))
+        >>> surface = pygame.Surface((10, 10))
         >>> space = pymunk.Space()
         >>> options = pymunk.pygame_util.DrawOptions(surface)
         >>> space.debug_draw(options)
@@ -206,7 +204,7 @@ class DrawOptions(pymunk.SpaceDebugDrawOptions):
         >>> space = pymunk.Space()
         >>> space.gravity = (0, -1000)
         >>> body = pymunk.Body()
-        >>> body.position = (0, 0) # will be positioned in the top left corner
+        >>> body.position = (0, 0)  # will be positioned in the top left corner
         >>> space.debug_draw(options)
 
         To flip the drawing its possible to set the module property
@@ -236,9 +234,7 @@ class DrawOptions(pymunk.SpaceDebugDrawOptions):
         p = to_pygame(pos, self.surface)
 
         pygame.draw.circle(self.surface, fill_color.as_int(), p, round(radius), 0)
-        pygame.draw.circle(
-            self.surface, light_color(fill_color).as_int(), p, round(radius - 4), 0
-        )
+        pygame.draw.circle(self.surface, light_color(fill_color).as_int(), p, round(radius - 4), 0)
 
         circle_edge = pos + Vec2d(radius, 0).rotated(angle)
         p2 = to_pygame(circle_edge, self.surface)
@@ -310,9 +306,7 @@ class DrawOptions(pymunk.SpaceDebugDrawOptions):
                 b = verts[(i + 1) % len(verts)]
                 self.draw_fat_segment(a, b, radius, fill_color, fill_color)
 
-    def draw_dot(
-        self, size: float, pos: Tuple[float, float], color: SpaceDebugColor
-    ) -> None:
+    def draw_dot(self, size: float, pos: Tuple[float, float], color: SpaceDebugColor) -> None:
         p = to_pygame(pos, self.surface)
         pygame.draw.circle(self.surface, color.as_int(), p, round(size), 0)
 
@@ -344,9 +338,7 @@ def from_pygame(p: Tuple[float, float], surface: pygame.Surface) -> Tuple[int, i
 
 
 def light_color(color: SpaceDebugColor):
-    color = np.minimum(
-        1.2 * np.float32([color.r, color.g, color.b, color.a]), np.float32([255])
-    )
+    color = np.minimum(1.2 * np.float32([color.r, color.g, color.b, color.a]), np.float32([255]))
     color = SpaceDebugColor(r=color[0], g=color[1], b=color[2], a=color[3])
     return color
 
@@ -451,27 +443,23 @@ class PushTEnv(gym.Env):
         if state is None:
             rs = self.random_state
             if self.with_velocity:
-                state = np.array(
-                    [
-                        rs.randint(50, 450),
-                        rs.randint(50, 450),
-                        rs.randint(100, 400),
-                        rs.randint(100, 400),
-                        rs.randn() * 2 * np.pi - np.pi,
-                        0,  # set random velocity to 0
-                        0,  # set random velocity to 0
-                    ]
-                )
+                state = np.array([
+                    rs.randint(50, 450),
+                    rs.randint(50, 450),
+                    rs.randint(100, 400),
+                    rs.randint(100, 400),
+                    rs.randn() * 2 * np.pi - np.pi,
+                    0,  # set random velocity to 0
+                    0,  # set random velocity to 0
+                ])
             else:
-                state = np.array(
-                    [
-                        rs.randint(50, 450),
-                        rs.randint(50, 450),
-                        rs.randint(100, 400),
-                        rs.randint(100, 400),
-                        rs.randn() * 2 * np.pi - np.pi,
-                    ]
-                )
+                state = np.array([
+                    rs.randint(50, 450),
+                    rs.randint(50, 450),
+                    rs.randint(100, 400),
+                    rs.randint(100, 400),
+                    rs.randn() * 2 * np.pi - np.pi,
+                ])
         self._set_state(state)
 
         self.coverage_arr = []
@@ -541,9 +529,7 @@ class PushTEnv(gym.Env):
 
         def act(obs):
             act = None
-            mouse_position = pymunk.pygame_util.from_pygame(
-                Vec2d(*pygame.mouse.get_pos()), self.screen
-            )
+            mouse_position = pymunk.pygame_util.from_pygame(Vec2d(*pygame.mouse.get_pos()), self.screen)
             if self.teleop or (mouse_position - self.agent.position).length < 30:
                 self.teleop = True
                 act = mouse_position
@@ -561,9 +547,7 @@ class PushTEnv(gym.Env):
             ).astype(np.float32)
         else:
             obs = np.array(
-                tuple(self.agent.position)
-                + tuple(self.block.position)
-                + (self.block.angle % (2 * np.pi),)
+                tuple(self.agent.position) + tuple(self.block.position) + (self.block.angle % (2 * np.pi),)
             ).astype(np.float32)
         return obs
 
@@ -607,9 +591,7 @@ class PushTEnv(gym.Env):
         goal_body = self._get_goal_pose_body(self.goal_pose)
         for shape in self.block.shapes:
             goal_points = [
-                pymunk.pygame_util.to_pygame(
-                    goal_body.local_to_world(v), draw_options.surface
-                )
+                pymunk.pygame_util.to_pygame(goal_body.local_to_world(v), draw_options.surface)
                 for v in shape.get_vertices()
             ]
             goal_points += [goal_points[0]]
@@ -705,19 +687,11 @@ class PushTEnv(gym.Env):
     def _set_state_local(self, state_local):
         agent_pos_local = state_local[:2]
         block_pose_local = state_local[2:]
-        tf_img_obj = st.AffineTransform(
-            translation=self.goal_pose[:2], rotation=self.goal_pose[2]
-        )
-        tf_obj_new = st.AffineTransform(
-            translation=block_pose_local[:2], rotation=block_pose_local[2]
-        )
+        tf_img_obj = st.AffineTransform(translation=self.goal_pose[:2], rotation=self.goal_pose[2])
+        tf_obj_new = st.AffineTransform(translation=block_pose_local[:2], rotation=block_pose_local[2])
         tf_img_new = st.AffineTransform(matrix=tf_img_obj.params @ tf_obj_new.params)
         agent_pos_new = tf_img_new(agent_pos_local)
-        new_state = np.array(
-            list(agent_pos_new[0])
-            + list(tf_img_new.translation)
-            + [tf_img_new.rotation]
-        )
+        new_state = np.array(list(agent_pos_new[0]) + list(tf_img_new.translation) + [tf_img_new.rotation])
         self._set_state(new_state)
         return new_state
 
@@ -743,9 +717,7 @@ class PushTEnv(gym.Env):
         # Add agent, block, and goal zone.
         self.agent = self.add_circle((256, 400), 15)
         # self.block = self.add_tee((256, 300), 0)
-        self.block = self.add_shape(
-            self.shape, (256, 300), 0, color=self.color, scale=40
-        )
+        self.block = self.add_shape(self.shape, (256, 300), 0, color=self.color, scale=40)
         if self.with_target:
             self.goal_color = pygame.Color("LightGreen")
         else:
@@ -762,9 +734,7 @@ class PushTEnv(gym.Env):
 
     def _add_segment(self, a, b, radius):
         shape = pymunk.Segment(self.space.static_body, a, b, radius)
-        shape.color = pygame.Color(
-            "LightGray"
-        )  # https://htmlcolorcodes.com/color-names
+        shape.color = pygame.Color("LightGray")  # https://htmlcolorcodes.com/color-names
         return shape
 
     def add_circle(self, position, radius):
@@ -818,9 +788,7 @@ class PushTEnv(gym.Env):
         shape2.color = pygame.Color(color)
         shape1.filter = pymunk.ShapeFilter(mask=mask)
         shape2.filter = pymunk.ShapeFilter(mask=mask)
-        body.center_of_gravity = (
-            shape1.center_of_gravity + shape2.center_of_gravity
-        ) / 2
+        body.center_of_gravity = (shape1.center_of_gravity + shape2.center_of_gravity) / 2
         body.position = position
         body.angle = angle
         body.friction = 1
@@ -857,9 +825,7 @@ class PushTEnv(gym.Env):
         shape2.color = pygame.Color(color)
         shape1.filter = pymunk.ShapeFilter(mask=mask)
         shape2.filter = pymunk.ShapeFilter(mask=mask)
-        body.center_of_gravity = (
-            shape1.center_of_gravity + shape2.center_of_gravity
-        ) / 2
+        body.center_of_gravity = (shape1.center_of_gravity + shape2.center_of_gravity) / 2
         body.position = position
         body.angle = angle
         body.friction = 1
@@ -906,11 +872,7 @@ class PushTEnv(gym.Env):
         shape1.filter = pymunk.ShapeFilter(mask=mask)
         shape2.filter = pymunk.ShapeFilter(mask=mask)
         shape3.filter = pymunk.ShapeFilter(mask=mask)
-        body.center_of_gravity = (
-            shape1.center_of_gravity
-            + shape2.center_of_gravity
-            + shape3.center_of_gravity
-        ) / 3
+        body.center_of_gravity = (shape1.center_of_gravity + shape2.center_of_gravity + shape3.center_of_gravity) / 3
         body.position = position
         body.angle = angle
         body.friction = 1
@@ -948,9 +910,7 @@ class PushTEnv(gym.Env):
         shape2.color = pygame.Color(color)
         shape1.filter = pymunk.ShapeFilter(mask=mask)
         shape2.filter = pymunk.ShapeFilter(mask=mask)
-        body.center_of_gravity = (
-            shape1.center_of_gravity + shape2.center_of_gravity
-        ) / 2
+        body.center_of_gravity = (shape1.center_of_gravity + shape2.center_of_gravity) / 2
         body.position = position
         body.angle = angle
         body.friction = 1
@@ -988,9 +948,7 @@ class PushTEnv(gym.Env):
         shape2.color = pygame.Color(color)
         shape1.filter = pymunk.ShapeFilter(mask=mask)
         shape2.filter = pymunk.ShapeFilter(mask=mask)
-        body.center_of_gravity = (
-            shape1.center_of_gravity + shape2.center_of_gravity
-        ) / 2
+        body.center_of_gravity = (shape1.center_of_gravity + shape2.center_of_gravity) / 2
         body.position = position
         body.angle = angle
         body.friction = 1
@@ -1121,9 +1079,7 @@ class PymunkKeypointManager:
 
             tf_img_obj = cls.get_tf_img_obj(obj)
             xy_img = np.moveaxis(np.array(np.indices((512, 512))), 0, -1)[:, :, ::-1]
-            local_coord_img = tf_img_obj.inverse(xy_img.reshape(-1, 2)).reshape(
-                xy_img.shape
-            )
+            local_coord_img = tf_img_obj.inverse(xy_img.reshape(-1, 2)).reshape(xy_img.shape)
             obj_local_coords = local_coord_img[obj_mask]
 
             # furthest point sampling
@@ -1148,9 +1104,7 @@ class PymunkKeypointManager:
         pose = tuple(obj.position) + (obj.angle,)
         return cls.get_tf_img(pose)
 
-    def get_keypoints_global(
-        self, pose_map: Dict[set, Union[Sequence, pymunk.Body]], is_obj=False
-    ):
+    def get_keypoints_global(self, pose_map: Dict[set, Union[Sequence, pymunk.Body]], is_obj=False):
         kp_map = dict()
         for key, value in pose_map.items():
             if is_obj:
@@ -1228,16 +1182,12 @@ class PushTKeypointsEnv(PushTEnv):
         high[Do:] = 1.0
 
         # (block_kps+agent_kps, xy+confidence)
-        self.observation_space = spaces.Box(
-            low=low, high=high, shape=low.shape, dtype=np.float64
-        )
+        self.observation_space = spaces.Box(low=low, high=high, shape=low.shape, dtype=np.float64)
 
         self.keypoint_visible_rate = keypoint_visible_rate
         self.agent_keypoints = agent_keypoints
         self.draw_keypoints = draw_keypoints
-        self.kp_manager = PymunkKeypointManager(
-            local_keypoint_map=local_keypoint_map, color_map=color_map
-        )
+        self.kp_manager = PymunkKeypointManager(local_keypoint_map=local_keypoint_map, color_map=color_map)
         self.draw_kp_map = None
 
     @classmethod
@@ -1286,7 +1236,5 @@ class PushTKeypointsEnv(PushTEnv):
     def _render_frame(self, mode):
         img = super()._render_frame(mode)
         if self.draw_keypoints:
-            self.kp_manager.draw_keypoints(
-                img, self.draw_kp_map, radius=int(img.shape[0] / 96)
-            )
+            self.kp_manager.draw_keypoints(img, self.draw_kp_map, radius=int(img.shape[0] / 96))
         return img

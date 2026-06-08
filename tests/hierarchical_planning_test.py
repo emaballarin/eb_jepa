@@ -8,12 +8,10 @@ import torch
 from eb_jepa.planning.agent import (
     GCAgent,
 )
-from eb_jepa.planning.optimizers import (
-    H_PlanningResult,
-    HierarchicalPlanner,
-    Planner,
-    PlanningResult,
-)
+from eb_jepa.planning.optimizers import H_PlanningResult
+from eb_jepa.planning.optimizers import HierarchicalPlanner
+from eb_jepa.planning.optimizers import Planner
+from eb_jepa.planning.optimizers import PlanningResult
 
 # =============================================================================
 # Tests for H_PlanningResult
@@ -172,9 +170,7 @@ class TestHierarchicalPlannerPlan:
                 prev_elite_losses_std=torch.zeros(5),
             )
         )
-        mock_planner.unroll = Mock(
-            return_value=torch.zeros(1, embed_dim, plan_length, 4, 4)
-        )
+        mock_planner.unroll = Mock(return_value=torch.zeros(1, embed_dim, plan_length, 4, 4))
         mock_planner.set_objective = Mock()
         return mock_planner
 
@@ -298,9 +294,7 @@ class TestHierarchicalPlannerExtractSubgoals:
         mock_planner.plan_length = 5
 
         level_planners = {1: mock_planner, 2: mock_planner}
-        planner = HierarchicalPlanner(
-            level_planners=level_planners, subgoal_mode="single"
-        )
+        planner = HierarchicalPlanner(level_planners=level_planners, subgoal_mode="single")
 
         high_traj = torch.randn(1, 8, 5, 4, 4)  # trajectory with T=5 states
         subgoal = planner._extract_subgoals(high_traj, source_level=2, target_level=1)
@@ -353,55 +347,47 @@ class TestGCAgentHierarchicalMode:
         """Test _is_hierarchical flag is set correctly."""
         from omegaconf import OmegaConf
 
-        mock_model, mock_preprocessor = self._make_mock_model_and_preprocessor(
-            num_levels=2
-        )
+        mock_model, mock_preprocessor = self._make_mock_model_and_preprocessor(num_levels=2)
 
-        flat_cfg = OmegaConf.create(
-            {
-                "planner": {
-                    "type": "flat",
-                    "planner_name": "cem",
-                    "n_iters": 3,
-                    "num_samples": 10,
-                    "plan_length": 5,
-                    "num_elites": 2,
-                    "var_scale": 1.0,
-                    "decode_each_iteration": False,
-                    "num_act_stepped": 1,
-                    "planning_objective": {"objective_type": "repr_dist"},
-                },
-                "ctxt_window_time": 1,
-            }
-        )
-        agent_flat = GCAgent(
-            mock_model, action_dim=2, plan_cfg=flat_cfg, preprocessor=mock_preprocessor
-        )
+        flat_cfg = OmegaConf.create({
+            "planner": {
+                "type": "flat",
+                "planner_name": "cem",
+                "n_iters": 3,
+                "num_samples": 10,
+                "plan_length": 5,
+                "num_elites": 2,
+                "var_scale": 1.0,
+                "decode_each_iteration": False,
+                "num_act_stepped": 1,
+                "planning_objective": {"objective_type": "repr_dist"},
+            },
+            "ctxt_window_time": 1,
+        })
+        agent_flat = GCAgent(mock_model, action_dim=2, plan_cfg=flat_cfg, preprocessor=mock_preprocessor)
         assert agent_flat._is_hierarchical is False
 
         # Hierarchical planner config
-        hierarchical_cfg = OmegaConf.create(
-            {
-                "planner": {
-                    "type": "hierarchical",
-                    "base_planner": "mppi",
-                    "n_iters": 3,
-                    "num_samples": 10,
-                    "max_std": 2,
-                    "num_elites": 2,
-                    "temperature": 0.005,
-                    "decode_each_iteration": False,
-                    "num_act_stepped": 1,
-                    "planning_objective": {"objective_type": "repr_dist"},
-                    "level_configs": {
-                        "level_1_planner": {"plan_length": 5},
-                        "level_2_planner": {"plan_length": 3},
-                    },
+        hierarchical_cfg = OmegaConf.create({
+            "planner": {
+                "type": "hierarchical",
+                "base_planner": "mppi",
+                "n_iters": 3,
+                "num_samples": 10,
+                "max_std": 2,
+                "num_elites": 2,
+                "temperature": 0.005,
+                "decode_each_iteration": False,
+                "num_act_stepped": 1,
+                "planning_objective": {"objective_type": "repr_dist"},
+                "level_configs": {
+                    "level_1_planner": {"plan_length": 5},
+                    "level_2_planner": {"plan_length": 3},
                 },
-                "ctxt_window_time": 1,
-                "logging": {"verbose": False},
-            }
-        )
+            },
+            "ctxt_window_time": 1,
+            "logging": {"verbose": False},
+        })
         agent_hierarchical = GCAgent(
             mock_model,
             action_dim=2,
@@ -414,33 +400,29 @@ class TestGCAgentHierarchicalMode:
         """Test _create_hierarchical_planner creates proper dict structure."""
         from omegaconf import OmegaConf
 
-        mock_model, mock_preprocessor = self._make_mock_model_and_preprocessor(
-            num_levels=3
-        )
+        mock_model, mock_preprocessor = self._make_mock_model_and_preprocessor(num_levels=3)
 
-        hierarchical_cfg = OmegaConf.create(
-            {
-                "planner": {
-                    "type": "hierarchical",
-                    "base_planner": "mppi",
-                    "n_iters": 3,
-                    "num_samples": 10,
-                    "max_std": 2,
-                    "num_elites": 2,
-                    "temperature": 0.005,
-                    "decode_each_iteration": False,
-                    "num_act_stepped": 1,
-                    "planning_objective": {"objective_type": "repr_dist"},
-                    "level_configs": {
-                        "level_1_planner": {"plan_length": 5},
-                        "level_2_planner": {"plan_length": 3},
-                        "level_3_planner": {"plan_length": 2},
-                    },
+        hierarchical_cfg = OmegaConf.create({
+            "planner": {
+                "type": "hierarchical",
+                "base_planner": "mppi",
+                "n_iters": 3,
+                "num_samples": 10,
+                "max_std": 2,
+                "num_elites": 2,
+                "temperature": 0.005,
+                "decode_each_iteration": False,
+                "num_act_stepped": 1,
+                "planning_objective": {"objective_type": "repr_dist"},
+                "level_configs": {
+                    "level_1_planner": {"plan_length": 5},
+                    "level_2_planner": {"plan_length": 3},
+                    "level_3_planner": {"plan_length": 2},
                 },
-                "ctxt_window_time": 1,
-                "logging": {"verbose": False},
-            }
-        )
+            },
+            "ctxt_window_time": 1,
+            "logging": {"verbose": False},
+        })
         agent = GCAgent(
             mock_model,
             action_dim=2,

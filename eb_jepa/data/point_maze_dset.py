@@ -1,17 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 from einops import rearrange
 
-from eb_jepa.utils.logging import get_logger
-
 from .traj_dset import TrajDataset
 from .utils import register_dataset
+from eb_jepa.utils.logging import get_logger
 
 log = get_logger(__name__)
 
@@ -51,15 +50,9 @@ class PointMazeDataset(TrajDataset):
         self.proprio_dim = self.proprios.shape[-1]
 
         if normalize_action:
-            self.action_mean, self.action_std = self.compute_mean_std(
-                self.actions, self.seq_lengths
-            )
-            self.state_mean, self.state_std = self.compute_mean_std(
-                self.states, self.seq_lengths
-            )
-            self.proprio_mean, self.proprio_std = self.compute_mean_std(
-                self.proprios, self.seq_lengths
-            )
+            self.action_mean, self.action_std = self.compute_mean_std(self.actions, self.seq_lengths)
+            self.state_mean, self.state_std = self.compute_mean_std(self.states, self.seq_lengths)
+            self.proprio_mean, self.proprio_std = self.compute_mean_std(self.proprios, self.seq_lengths)
         else:
             self.action_mean = torch.zeros(self.action_dim)
             self.action_std = torch.ones(self.action_dim)

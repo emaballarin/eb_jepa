@@ -10,10 +10,10 @@ This example demonstrates how to train a Joint Embedding Predictive Architecture
 - **Representation learning**: Learns meaningful representations through self-supervised learning, by learning to be invariant to image augmentations (crop, color augmentations, etc).
 - **Linear probing evaluation**: Evaluates learned representations using a linear classifier. This is evaluated online, during training on a validation set.
 
-
 ## Architecture
 
 The Image JEPA consists of:
+
 - **Encoder**: ResNet18/Transformer backbone that processes individual images
 - **Regularizer**: Variance-Covariance (VC) or SIGReg loss to prevent representation collapse
 - **Projector**: Learned MLP Projector (loss is computed on the projected subspace)
@@ -58,12 +58,12 @@ python -m examples.image_jepa.main --fname examples/image_jepa/cfgs/default.yaml
 
 Configs for ImageNet-1K training are in `cfgs/IN1K/`:
 
-| Config | Backbone | Loss | Val Acc (%) |
-|--------|----------|------|-------------|
-| `IN1K/sigreg_resnet50.yaml` | ResNet-50 | SIGReg | **66.43** |
-| `IN1K/vicreg_resnet50.yaml` | ResNet-50 | VICReg | 62.67* |
-| `IN1K/vicreg_vits.yaml` | ViT-S | VICReg | 59.87* |
-| `IN1K/sigreg_vits.yaml` | ViT-S | SIGReg | 59.29* |
+| Config                      | Backbone  | Loss   | Val Acc (%) |
+| --------------------------- | --------- | ------ | ----------- |
+| `IN1K/sigreg_resnet50.yaml` | ResNet-50 | SIGReg | **66.43**   |
+| `IN1K/vicreg_resnet50.yaml` | ResNet-50 | VICReg | 62.67\*     |
+| `IN1K/vicreg_vits.yaml`     | ViT-S     | VICReg | 59.87\*     |
+| `IN1K/sigreg_vits.yaml`     | ViT-S     | SIGReg | 59.29\*     |
 
 ```bash
 python -m examples.image_jepa.main --fname examples/image_jepa/cfgs/IN1K/sigreg_resnet50.yaml
@@ -77,13 +77,13 @@ We first compare the sensitivity to regularizer loss coefficients of SIGReg and 
 
 ![Hyperparameter Sensitivity Comparison](assets/aggregated_perf_image.png)
 
-| Metric | SIGReg (BCS) | VICReg |
-|--------|------------------|--------|
-| Best Accuracy | 91.02% | 90.12% |
-| Average (non-collapsed) Accuracy | 89.22% | 84.90% |
-| Projector Benefit | +3.3 points | +2.9 points |
-| Hyperparameters | 1 | 2 |
-| Best Projector Dims | 2048×128 | 2048x1024 |
+| Metric                           | SIGReg (BCS) | VICReg      |
+| -------------------------------- | ------------ | ----------- |
+| Best Accuracy                    | 91.02%       | 90.12%      |
+| Average (non-collapsed) Accuracy | 89.22%       | 84.90%      |
+| Projector Benefit                | +3.3 points  | +2.9 points |
+| Hyperparameters                  | 1            | 2           |
+| Best Projector Dims              | 2048×128     | 2048x1024   |
 
 **Finding:** Both methods achieve similar peak performance (~90%). While both methods can fail in certain cases, logical hyperparameter choices give performance in a similar ballpark. Performing the most naïve search over hyperparameters, SIGReg can be easier to tune due to the use of a single loss hyperparameter.
 
@@ -91,30 +91,29 @@ We first compare the sensitivity to regularizer loss coefficients of SIGReg and 
 
 With a batch size of 256 and 1024x1024 projector we investigate the impact of regularizations for VICReg and SIGReg:
 
-|      | SIGReg    |          | VICReg     |          |
-|------|------------|----------|------------|----------|
-| Rank | Hyperparameters | Accuracy | Hyperparameters | Accuracy |
-| 1 | $\lambda$= 10 |90.88 %   | std = 1 cov = 100 | 90.12 % |
-| 2 | $\lambda$= 1 | 86.94%    | std = 1 cov = 10 | 89.93 % |
-| 3 | $\lambda$= 100 | 80.86%  | std = 10 cov = 10 |  89.2 % |
-| -1 | $\lambda$= 0.1 | 27.20% | std = 100 cov = 100 | 10.00% |
+|      | SIGReg          |          | VICReg              |          |
+| ---- | --------------- | -------- | ------------------- | -------- |
+| Rank | Hyperparameters | Accuracy | Hyperparameters     | Accuracy |
+| 1    | $\lambda$= 10   | 90.88 %  | std = 1 cov = 100   | 90.12 %  |
+| 2    | $\lambda$= 1    | 86.94%   | std = 1 cov = 10    | 89.93 %  |
+| 3    | $\lambda$= 100  | 80.86%   | std = 10 cov = 10   | 89.2 %   |
+| -1   | $\lambda$= 0.1  | 27.20%   | std = 100 cov = 100 | 10.00%   |
 
 **Finding:** For both methods, performance can vary drastically between different hyperparameter choices. The main failure mode is when losses such as the invariance term (here set with a weight of 1) become insignificant which leads to a fundamentally flawed training. Logical choices offer much more stable performance.
-
 
 ### Impact of the projector
 
 Top 5 dimension combinations. For SIGReg we use λ=10.0, batch_size=256 and for VICReg std=1.0,cov=100, batch_size=256:
 
-|      | SIGReg    |          | VICReg     |          |
-|------|------------|----------|------------|----------|
-| Rank | Dimensions | Accuracy | Dimensions | Accuracy |
-| 1 | 2048 × 128 | 91.02% | 2048 × 1024 | 90.12% |
-| 2 | 4096 × 1024 | 91.00% | 4096 x 512 | 90.10% |
-| 3 | 2048 × 64 | 90.99% | 1024 x 1024 | 90.05% |
-| 4 | 512 × 256 | 90.99% | 2048 x 512 | 90.03% |
-| 5 | 4096 × 64 | 90.96% | 4096 x 1024 | 90.02% |
-| N/A | None | 87.75% | None | 87.27% |
+|      | SIGReg      |          | VICReg      |          |
+| ---- | ----------- | -------- | ----------- | -------- |
+| Rank | Dimensions  | Accuracy | Dimensions  | Accuracy |
+| 1    | 2048 × 128  | 91.02%   | 2048 × 1024 | 90.12%   |
+| 2    | 4096 × 1024 | 91.00%   | 4096 x 512  | 90.10%   |
+| 3    | 2048 × 64   | 90.99%   | 1024 x 1024 | 90.05%   |
+| 4    | 512 × 256   | 90.99%   | 2048 x 512  | 90.03%   |
+| 5    | 4096 × 64   | 90.96%   | 4096 x 1024 | 90.02%   |
+| N/A  | None        | 87.75%   | None        | 87.27%   |
 
 **Finding:** Large hidden dimensions are beneficial for both methods, although all of the top-performing scenarios all offer similar performance.
 VICReg tends to work better with higher dimensional output dimensions, whereas SIGReg works better with small output dimensions.
@@ -122,25 +121,23 @@ This difference does not lead to meaningful practical differences in terms of tr
 
 Both methods have a similar drop of performance of around 2.5-3 points when not using a projector, highlighting its importance in the method's design.
 
-
 ### ImageNet-1K
 
 We train on ImageNet-1K with ResNet-50 and ViT-S/14 backbones using SIGReg and VICReg losses. Val Acc is measured using the online linear probe after 100 pretraining epochs:
 
-| Config | Backbone | Loss | Optimizer | Projector | Epochs | Val Acc (%) |
-|--------|----------|------|-----------|-----------|--------|-------------|
-| `sigreg_resnet50` | ResNet-50 | SIGReg (λ=0.01) | AdamW | 2048→64 | 300 | **66.43** |
-| `vicreg_resnet50` | ResNet-50 | VICReg (cov=80) | LARS | 8192→8192 | 330/1000 | 62.67* |
-| `vicreg_vits` | ViT-S/14 | VICReg (cov=10) | AdamW | 4096→8192 | 66/300 | 59.87* |
-| `sigreg_vits` | ViT-S/14 | SIGReg (λ=0.005) | AdamW | 1024→64 | 80/300 | 59.29* |
+| Config            | Backbone  | Loss             | Optimizer | Projector | Epochs   | Val Acc (%) |
+| ----------------- | --------- | ---------------- | --------- | --------- | -------- | ----------- |
+| `sigreg_resnet50` | ResNet-50 | SIGReg (λ=0.01)  | AdamW     | 2048→64   | 300      | **66.43**   |
+| `vicreg_resnet50` | ResNet-50 | VICReg (cov=80)  | LARS      | 8192→8192 | 330/1000 | 62.67\*     |
+| `vicreg_vits`     | ViT-S/14  | VICReg (cov=10)  | AdamW     | 4096→8192 | 66/300   | 59.87\*     |
+| `sigreg_vits`     | ViT-S/14  | SIGReg (λ=0.005) | AdamW     | 1024→64   | 80/300   | 59.29\*     |
 
 \* Sweep still training; results will be updated.
 
-
 ---
 
-
 ## References
+
 - [JEPA Paper](https://openreview.net/pdf?id=BZ5a1r-kVsf)
 - [ResNet Architecture](https://arxiv.org/abs/1512.03385)
 - [Transformer Architecture](https://arxiv.org/abs/1706.03762)

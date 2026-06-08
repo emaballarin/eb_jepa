@@ -1,20 +1,19 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Inspired from https://github.com/gaoyuezhou/dino_wm
 # Licensed under the MIT License
-
 import pickle
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import decord
 import torch
 from decord import VideoReader
 from einops import rearrange
 
-from eb_jepa.utils.logging import get_logger
-
 from .traj_dset import TrajDataset
 from .utils import register_dataset
+from eb_jepa.utils.logging import get_logger
 
 log = get_logger(__name__)
 
@@ -65,9 +64,7 @@ class PushTDataset(TrajDataset):
         self.states = self.states[:n]
         self.actions = self.actions[:n]
         self.seq_lengths = self.seq_lengths[:n]
-        self.proprios = self.states[
-            ..., :2
-        ].clone()  # For pusht, first 2 dim of states is proprio
+        self.proprios = self.states[..., :2].clone()  # For pusht, first 2 dim of states is proprio
         # load velocities and update states and proprios
         self.with_velocity = with_velocity
         if with_velocity:
@@ -85,20 +82,16 @@ class PushTDataset(TrajDataset):
             # Precomputed stats (matching DATA_STATS in __init__.py)
             self.action_mean = torch.tensor([-0.0087, 0.0068])
             self.action_std = torch.tensor([0.2019, 0.2002])
-            _state_mean = torch.tensor(
-                [
-                    236.6155,
-                    264.5674,
-                    255.1307,
-                    266.3721,
-                    1.9584,
-                    -2.93032027,
-                    2.54307914,
-                ]
-            )
-            _state_std = torch.tensor(
-                [101.1202, 87.0112, 52.7054, 57.4971, 1.7556, 74.84556075, 74.14009094]
-            )
+            _state_mean = torch.tensor([
+                236.6155,
+                264.5674,
+                255.1307,
+                266.3721,
+                1.9584,
+                -2.93032027,
+                2.54307914,
+            ])
+            _state_std = torch.tensor([101.1202, 87.0112, 52.7054, 57.4971, 1.7556, 74.84556075, 74.14009094])
             _proprio_mean = torch.tensor([236.6155, 264.5674, -2.93032027, 2.54307914])
             _proprio_std = torch.tensor([101.1202, 87.0112, 74.84556075, 74.14009094])
             self.state_mean = _state_mean[: self.state_dim]

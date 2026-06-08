@@ -1,13 +1,16 @@
-from __future__ import annotations
-
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 import torch.distributed as dist
 import torch.nn as nn
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
+from omegaconf import OmegaConf
 
 from eb_jepa.utils.logging import get_logger
 
@@ -173,10 +176,7 @@ def _hac_base(cfg):
     ds = _cfg_get(cfg, "data.env_name") or _cfg_get(cfg, "data.dataset") or "unk"
     rt = _cfg_get(cfg, "model.level_1.regularizer.type", "vc")
     n = cfg.model.num_levels
-    prefix = (
-        f"{ds}_h{n}lvl-{_enc_tag(cfg, 'model.level_1')}"
-        f"-{_pred_tag(cfg, 'model.level_1')}-{rt}"
-    )
+    prefix = f"{ds}_h{n}lvl-{_enc_tag(cfg, 'model.level_1')}-{_pred_tag(cfg, 'model.level_1')}-{rt}"
     keys = []
     for lvl in range(1, n + 1):
         keys.extend(_reg_keys(rt, f"model.level_{lvl}.regularizer"))
@@ -231,21 +231,12 @@ def get_exp_name(example_name: str, cfg, param_grid: Optional[dict] = None) -> s
             base_keys.append("loss.lmbd")
         base_name = "_".join(str(p) for p in parts)
     elif example_name == "video_jepa":
-        base_name = (
-            f"resnet_bs{cfg.data.batch_size}"
-            f"_lr{cfg.optim.lr}"
-            f"_std{cfg.loss.std_coeff}"
-            f"_cov{cfg.loss.cov_coeff}"
-        )
+        base_name = f"resnet_bs{cfg.data.batch_size}_lr{cfg.optim.lr}_std{cfg.loss.std_coeff}_cov{cfg.loss.cov_coeff}"
     else:
         base_name = "exp"
 
     if param_grid:
-        sweep_keys = [
-            k
-            for k in sorted(param_grid)
-            if k != "meta.seed" and k not in set(base_keys)
-        ]
+        sweep_keys = [k for k in sorted(param_grid) if k != "meta.seed" and k not in set(base_keys)]
         if sweep_keys:
             base_name = f"{base_name}_{_encode_params(cfg, sweep_keys)}"
 
@@ -336,9 +327,7 @@ def load_config_with_prefixed_overrides(
     else:
         for prefix in prefixes:
             raw = cfg.pop(prefix, None)
-            prefix_overrides[prefix] = (
-                OmegaConf.to_container(raw) if raw is not None else {}
-            )
+            prefix_overrides[prefix] = OmegaConf.to_container(raw) if raw is not None else {}
     return cfg, prefix_overrides
 
 
@@ -390,9 +379,7 @@ def get_dataset_name(cfg) -> str:
     return name
 
 
-def resolve_experiment_folder(
-    example_name: str, cfg, folder: Union[str, Path, None] = None
-) -> tuple[Path, str]:
+def resolve_experiment_folder(example_name: str, cfg, folder: Union[str, Path, None] = None) -> tuple[Path, str]:
     """Resolve experiment folder and name from config, creating the directory.
 
     Args:
@@ -462,9 +449,7 @@ def log_data_info(
     multi-GPU, the per-GPU batch size is also displayed.
     """
     ws = dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
-    bs_str = (
-        f"{batch_size}" if ws == 1 else f"{batch_size} global ({batch_size // ws}/gpu)"
-    )
+    bs_str = f"{batch_size}" if ws == 1 else f"{batch_size} global ({batch_size // ws}/gpu)"
     parts = [f"📦 Data: {dataset_name} | {num_batches} batches x {bs_str}"]
     if train_samples is not None and val_samples is not None:
         parts.append(f"train={train_samples:,} | val={val_samples:,}")

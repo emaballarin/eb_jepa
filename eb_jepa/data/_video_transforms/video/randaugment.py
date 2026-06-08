@@ -1,23 +1,17 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
-
 # Copyright 2020 Ross Wightman
-
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
 #     http://www.apache.org/licenses/LICENSE-2.0
-
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 # This implementation is based on
 # https://github.com/rwightman/pytorch-image-models/blob/master/timm/data/auto_augment.py
 # published under an Apache License 2.0.
-
 # COMMENT FROM ORIGINAL:
 # AutoAugment, RandAugment, and AugMix for PyTorch
 # This code implements the searched ImageNet policies with various tweaks and
@@ -35,7 +29,6 @@
 #     https://arxiv.org/abs/1909.13719
 #     AugMix: A Simple Data Processing Method to Improve Robustness and
 #     Uncertainty https://arxiv.org/abs/1912.02781
-
 """
 This implementation is based on
 https://github.com/rwightman/pytorch-image-models/blob/master/timm/data/auto_augment.py
@@ -68,7 +61,9 @@ import re
 
 import numpy as np
 import PIL
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image
+from PIL import ImageEnhance
+from PIL import ImageOps
 
 _PIL_VER = tuple([int(x) for x in PIL.__version__.split(".")[:2]])
 
@@ -375,11 +370,7 @@ class AugmentOp:
         self.hparams = hparams.copy()
         self.kwargs = {
             "fillcolor": hparams["img_mean"] if "img_mean" in hparams else _FILL,
-            "resample": (
-                hparams["interpolation"]
-                if "interpolation" in hparams
-                else _RANDOM_INTERPOLATION
-            ),
+            "resample": (hparams["interpolation"] if "interpolation" in hparams else _RANDOM_INTERPOLATION),
         }
 
         # If magnitude_std is > 0, we introduce some randomness
@@ -395,9 +386,7 @@ class AugmentOp:
         if self.magnitude_std and self.magnitude_std > 0:
             magnitude = random.gauss(magnitude, self.magnitude_std)
         magnitude = min(_MAX_LEVEL, max(0, magnitude))  # clip to valid range
-        level_args = (
-            self.level_fn(magnitude, self.hparams) if self.level_fn is not None else ()
-        )
+        level_args = self.level_fn(magnitude, self.hparams) if self.level_fn is not None else ()
 
         if isinstance(img_list, list):
             return [self.aug_fn(img, *level_args, **self.kwargs) for img in img_list]
@@ -497,10 +486,7 @@ def _select_rand_weights(weight_idx=0, transforms=None):
 def rand_augment_ops(magnitude=10, hparams=None, transforms=None):
     hparams = hparams or _HPARAMS_DEFAULT
     transforms = transforms or _RAND_TRANSFORMS
-    return [
-        AugmentOp(name, prob=0.5, magnitude=magnitude, hparams=hparams)
-        for name in transforms
-    ]
+    return [AugmentOp(name, prob=0.5, magnitude=magnitude, hparams=hparams) for name in transforms]
 
 
 class RandAugment:
@@ -566,8 +552,6 @@ def rand_augment_transform(config_str, hparams):
             weight_idx = int(val)
         else:
             assert NotImplementedError
-    ra_ops = rand_augment_ops(
-        magnitude=magnitude, hparams=hparams, transforms=transforms
-    )
+    ra_ops = rand_augment_ops(magnitude=magnitude, hparams=hparams, transforms=transforms)
     choice_weights = None if weight_idx is None else _select_rand_weights(weight_idx)
     return RandAugment(ra_ops, num_layers, choice_weights=choice_weights)

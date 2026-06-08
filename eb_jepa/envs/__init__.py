@@ -2,11 +2,10 @@
 # All rights reserved.
 # The below code is inspired from TD-MPC2 https://github.com/nicklashansen/tdmpc2
 # licensed under the MIT License
-
 import logging
 import warnings
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Callable
 
 import numpy as np
 import torch
@@ -35,9 +34,7 @@ def _lazy_make_env(env_key, cfg):
 
             _lazy_env_cache[env_key] = importlib.import_module(module_path).make_env
         except Exception as e:
-            raise ImportError(
-                f"Missing dependencies for {install_name}. See README.md. Error: {e}"
-            ) from e
+            raise ImportError(f"Missing dependencies for {install_name}. See README.md. Error: {e}") from e
     return _lazy_env_cache[env_key](cfg)
 
 
@@ -70,9 +67,7 @@ class _PlanningEnvAdapter:
 
     def _render_tensor(self) -> torch.Tensor:
         img = self._render_fn()  # [H, W, C] uint8 numpy
-        return (
-            torch.from_numpy(img.copy()).float().permute(2, 0, 1) / 255.0
-        )  # [C, H, W]
+        return torch.from_numpy(img.copy()).float().permute(2, 0, 1) / 255.0  # [C, H, W]
 
     @property
     def action_space(self):
@@ -113,14 +108,10 @@ class _PlanningEnvAdapter:
         result to a ``[C, H, W]`` float tensor in ``[0, 1]``.
         """
         img = self.env.render_at_position(pos)  # [H, W, C] uint8 numpy
-        return (
-            torch.from_numpy(img.copy()).float().permute(2, 0, 1) / 255.0
-        )  # [C, H, W]
+        return torch.from_numpy(img.copy()).float().permute(2, 0, 1) / 255.0  # [C, H, W]
 
 
-def make_env_creator(
-    env_name: str, env_config: dict, eval_env_cfg: dict = None
-) -> Callable:
+def make_env_creator(env_name: str, env_config: dict, eval_env_cfg: dict = None) -> Callable:
     """Return a callable that creates the appropriate environment for planning eval.
 
     Args:
@@ -148,9 +139,7 @@ def make_env_creator(
             from eb_jepa.envs.pusht_gym_wrap import PushTWrapper
 
             render_size = env_config.get("img_size", 96)
-            base_env = PushTEnv(
-                with_velocity=True, with_target=True, render_size=render_size
-            )
+            base_env = PushTEnv(with_velocity=True, with_target=True, render_size=render_size)
             wrapper = PushTWrapper(base_env)
             n_steps = eval_env_cfg.get("n_allowed_steps", 200)
             return _PlanningEnvAdapter(
@@ -223,17 +212,11 @@ def make_env(cfg):
         elif cfg.task_specification.task.startswith("robocasa"):
             pass
         else:  # pusht
-            cfg.task_specification.max_episode_steps = (
-                cfg.frameskip * cfg.task_specification.goal_H
-            )
-            cfg.task_specification.goal_max_episode_steps = (
-                cfg.frameskip * cfg.task_specification.goal_H
-            )
+            cfg.task_specification.max_episode_steps = cfg.frameskip * cfg.task_specification.goal_H
+            cfg.task_specification.goal_max_episode_steps = cfg.frameskip * cfg.task_specification.goal_H
     elif cfg.task_specification.goal_source == "random_state":
         # TODO: Hardcoded for now, improve
-        cfg.task_specification.max_episode_steps = (
-            cfg.frameskip * cfg.task_specification.goal_H
-        )
+        cfg.task_specification.max_episode_steps = cfg.frameskip * cfg.task_specification.goal_H
     else:
         if cfg.task_specification.get("max_episode_steps", None) is None:
             cfg.task_specification.max_episode_steps = 100
@@ -260,9 +243,7 @@ def make_env(cfg):
     try:  # Dict
         cfg.obs_shape = {k: v.shape for k, v in env.observation_space.spaces.items()}
     except:  # Box
-        cfg.obs_shape = {
-            cfg.task_specification.get("obs", "state"): env.observation_space.shape
-        }
+        cfg.obs_shape = {cfg.task_specification.get("obs", "state"): env.observation_space.shape}
     if cfg.task_specification.get("obs", "state") == "rgb_state":
         cfg.obs_shape = {"state": [4], "rgb": cfg.obs_shape["rgb_state"]}
 

@@ -78,9 +78,7 @@ def run(
         folder: Experiment folder path (optional, auto-generated if not provided).
         **overrides: Config overrides in dot notation (e.g., model.num_levels=4).
     """
-    cfg, prefix_ovr = load_config_with_prefixed_overrides(
-        fname, cfg, ["plan_cfg", "eval_cfg"], **overrides
-    )
+    cfg, prefix_ovr = load_config_with_prefixed_overrides(fname, cfg, ["plan_cfg", "eval_cfg"], **overrides)
     plan_cfg_overrides = prefix_ovr["plan_cfg"]
     eval_cfg_overrides = prefix_ovr["eval_cfg"]
 
@@ -89,13 +87,9 @@ def run(
 
     folder, exp_name = resolve_experiment_folder("h_ac_video_jepa", cfg, folder)
 
-    loader, val_loader, data_config = init_data(
-        env_name=cfg.data.env_name, cfg_data=dict(cfg.data)
-    )
+    loader, val_loader, data_config = init_data(env_name=cfg.data.env_name, cfg_data=dict(cfg.data))
     if is_main:
-        diag_loader, _, _ = init_data(
-            env_name=cfg.data.env_name, cfg_data=dict(cfg.data)
-        )
+        diag_loader, _, _ = init_data(env_name=cfg.data.env_name, cfg_data=dict(cfg.data))
     else:
         diag_loader = None
 
@@ -153,12 +147,8 @@ def run(
     )
 
     total_params = sum(p.numel() for p in h_jepa.parameters())
-    encoder_params = sum(
-        sum(p.numel() for p in level.encoder.parameters()) for level in h_jepa.levels
-    )
-    predictor_params = sum(
-        sum(p.numel() for p in level.predictor.parameters()) for level in h_jepa.levels
-    )
+    encoder_params = sum(sum(p.numel() for p in level.encoder.parameters()) for level in h_jepa.levels)
+    predictor_params = sum(sum(p.numel() for p in level.predictor.parameters()) for level in h_jepa.levels)
 
     logger.info(f"Hierarchical JEPA with {cfg.model.num_levels} levels")
     log_model_info(
@@ -185,9 +175,7 @@ def run(
     if pos_mean is not None:
         pos_mean = pos_mean[probe_state_dims]
         pos_std = pos_std[probe_state_dims]
-        logger.info(
-            f"Probe Z-score stats: mean={pos_mean.tolist()}, " f"std={pos_std.tolist()}"
-        )
+        logger.info(f"Probe Z-score stats: mean={pos_mean.tolist()}, std={pos_std.tolist()}")
 
     # Build per-level probe heads by detecting each level's output dimension
     test_input = torch.rand(1, num_channels, 4, img_size, img_size).to(device)
@@ -254,9 +242,7 @@ def run(
     eval_only = cfg.meta.get("eval_only_mode", False)
     train_decoder_only = cfg.meta.get("train_decoder_only", False)
     model_folder = (
-        cfg.meta.get("model_folder")
-        if (eval_only or train_decoder_only) and cfg.meta.get("model_folder")
-        else None
+        cfg.meta.get("model_folder") if (eval_only or train_decoder_only) and cfg.meta.get("model_folder") else None
     )
     start_epoch, ckpt_info = resume_training(
         folder,
@@ -275,9 +261,7 @@ def run(
             for lvl_str, sd in ckpt_info["xy_heads_state_dict"].items():
                 lvl = int(lvl_str) if isinstance(lvl_str, str) else lvl_str
                 if lvl in xy_heads:
-                    xy_heads[lvl].load_state_dict(
-                        unwrap_state_dict(sd), strict=not eval_only
-                    )
+                    xy_heads[lvl].load_state_dict(unwrap_state_dict(sd), strict=not eval_only)
         elif "xy_head_state_dict" in ckpt_info:
             xy_heads[1].load_state_dict(
                 unwrap_state_dict(ckpt_info["xy_head_state_dict"]),
@@ -287,9 +271,7 @@ def run(
             for lvl_str, sd in ckpt_info["visual_decoders_state_dict"].items():
                 lvl = int(lvl_str) if isinstance(lvl_str, str) else lvl_str
                 if lvl in visual_decoders:
-                    visual_decoders[lvl].load_state_dict(
-                        unwrap_state_dict(sd), strict=not eval_only
-                    )
+                    visual_decoders[lvl].load_state_dict(unwrap_state_dict(sd), strict=not eval_only)
         if not eval_only and not train_decoder_only:
             if "probe_optimizer_state_dict" in ckpt_info:
                 probe_optimizer.load_state_dict(ckpt_info["probe_optimizer_state_dict"])
@@ -352,13 +334,9 @@ def run(
             )
         )
         if "success_rate" in eval_results:
-            logger.info(
-                f"Evaluation complete. Success rate: {eval_results['success_rate']:.2%}"
-            )
+            logger.info(f"Evaluation complete. Success rate: {eval_results['success_rate']:.2%}")
         elif "ate/end_distance" in eval_results:
-            logger.info(
-                f"Evaluation complete. ATE: {eval_results['ate/end_distance']:.4f}"
-            )
+            logger.info(f"Evaluation complete. ATE: {eval_results['ate/end_distance']:.4f}")
         return eval_results
 
     rank_acc = EffectiveRankAccumulator()
@@ -406,24 +384,20 @@ def run(
             else:
                 jepa_optimizer.zero_grad()
                 with autocast(device.type, enabled=use_amp, dtype=dtype):
-                    _, encodings, (jepa_loss, regl, regl_unweight, regldict, pl) = (
-                        h_jepa(
-                            x,
-                            a,
-                            nsteps=cfg.model.get("rollout", {}).get("nsteps", 8),
-                            unroll_mode="autoregressive",
-                            ctxt_window_time=1,
-                            compute_loss=True,
-                            return_all_steps=False,
-                        )
+                    _, encodings, (jepa_loss, regl, regl_unweight, regldict, pl) = h_jepa(
+                        x,
+                        a,
+                        nsteps=cfg.model.get("rollout", {}).get("nsteps", 8),
+                        unroll_mode="autoregressive",
+                        ctxt_window_time=1,
+                        compute_loss=True,
+                        return_all_steps=False,
                     )
                     total_loss += jepa_loss
 
                 scaler.scale(total_loss).backward()
                 grad_clip = cfg.optim.get("grad_clip")
-                jepa_grad_norm = optimizer_step(
-                    scaler, jepa_optimizer, h_jepa_module, grad_clip
-                )
+                jepa_grad_norm = optimizer_step(scaler, jepa_optimizer, h_jepa_module, grad_clip)
                 jepa_scheduler.step()
 
             probe_optimizer.zero_grad()
@@ -434,9 +408,7 @@ def run(
                     loc_l = loc[:, probe_state_dims, ::scale]
                     state_l = encodings[probe_level].detach()
                     output_l = xy_heads[probe_level](state_l)
-                    loc_l_norm = unwrap_model(xy_heads[probe_level]).normalize_targets(
-                        loc_l
-                    )
+                    loc_l_norm = unwrap_model(xy_heads[probe_level]).normalize_targets(loc_l)
                     xy_loss_l = nn.MSELoss()(output_l, loc_l_norm)
                     if dset.preprocessor is not None:
                         xy_loss_l = dset.preprocessor.denormalize_mse(xy_loss_l)
@@ -468,13 +440,11 @@ def run(
             optimizer_step(scaler, probe_optimizer)
             probe_scheduler.step()
 
-            pbar.set_postfix(
-                {
-                    "loss": f"{total_loss.item():.4f}",
-                    "reg": f"{regl.item():.4f}",
-                    "pred": f"{pl.item():.4f}",
-                }
-            )
+            pbar.set_postfix({
+                "loss": f"{total_loss.item():.4f}",
+                "reg": f"{regl.item():.4f}",
+                "pred": f"{pl.item():.4f}",
+            })
 
             # Accumulate effective rank over the last N steps before a log step
             if is_main and global_step % cfg.logging.log_every < rank_acc.max_batches:
@@ -482,9 +452,7 @@ def run(
                     for level in range(1, h_jepa_module.num_levels + 1):
                         enc_l = encodings[level]  # [B, D, T_l, H', W']
                         D = enc_l.shape[1]
-                        flat_enc = enc_l.permute(0, 2, 3, 4, 1).reshape(
-                            -1, D
-                        )  # [B*T*H'*W', D]
+                        flat_enc = enc_l.permute(0, 2, 3, 4, 1).reshape(-1, D)  # [B*T*H'*W', D]
                         rank_acc.accumulate(
                             f"train/visual_collapse/level_{level}/effective_rank",
                             flat_enc,
@@ -492,9 +460,7 @@ def run(
                     for level in range(2, h_jepa_module.num_levels + 1):
                         actions_l = h_jepa_module.aggregate_actions(a, level)
                         A_enc = actions_l.shape[1]
-                        flat_actions = actions_l.permute(0, 2, 1).reshape(
-                            -1, A_enc
-                        )  # [B*T, A_enc]
+                        flat_actions = actions_l.permute(0, 2, 1).reshape(-1, A_enc)  # [B*T, A_enc]
                         rank_acc.accumulate(
                             f"train/action_collapse/level_{level}/effective_rank",
                             flat_actions,
@@ -508,24 +474,13 @@ def run(
                     "train/reg_loss_unweight": regl_unweight.item(),
                     "train/pred_loss": pl.item(),
                     "train/probe_loss": probe_loss_total.item(),
-                    **(
-                        {"train/visual_decoder_loss": vd_loss_total.item()}
-                        if visual_decoders
-                        else {}
-                    ),
+                    **({"train/visual_decoder_loss": vd_loss_total.item()} if visual_decoders else {}),
                     "global_step": global_step,
                     "epoch": epoch,
                     "itr_time": itr_time,
-                    **{
-                        f"optim/jepa_lr/{pg['name']}": pg["lr"]
-                        for pg in jepa_optimizer.param_groups
-                    },
+                    **{f"optim/jepa_lr/{pg['name']}": pg["lr"] for pg in jepa_optimizer.param_groups},
                     "optim/probe_lr": probe_optimizer.param_groups[0]["lr"],
-                    **(
-                        {"optim/grad_norm": jepa_grad_norm}
-                        if jepa_grad_norm is not None
-                        else {}
-                    ),
+                    **({"optim/grad_norm": jepa_grad_norm} if jepa_grad_norm is not None else {}),
                 }
                 for loss_name, loss_value in regldict.items():
                     log_data[f"train/regl/{loss_name}"] = loss_value
@@ -536,42 +491,30 @@ def run(
                         for level in range(2, h_jepa_module.num_levels + 1):
                             actions_l = h_jepa_module.aggregate_actions(a, level)
                             action_norm = torch.norm(actions_l, dim=(1, 2)).mean()
-                            log_data[f"train/action_encoder_norm/level_{level}"] = (
-                                action_norm.item()
-                            )
+                            log_data[f"train/action_encoder_norm/level_{level}"] = action_norm.item()
                             action_std = actions_l.std()
-                            log_data[f"train/action_encoder_std/level_{level}"] = (
-                                action_std.item()
-                            )
+                            log_data[f"train/action_encoder_std/level_{level}"] = action_std.item()
 
                             A_enc = actions_l.shape[1]
-                            flat_actions = actions_l.permute(0, 2, 1).reshape(
-                                -1, A_enc
-                            )  # [B*T, A_enc]
+                            flat_actions = actions_l.permute(0, 2, 1).reshape(-1, A_enc)  # [B*T, A_enc]
                             per_feat_std = flat_actions.std(dim=0)  # [A_enc]
-                            log_data[
-                                f"train/action_collapse/level_{level}/per_feat_std_min"
-                            ] = per_feat_std.min().item()
-                            log_data[
-                                f"train/action_collapse/level_{level}/per_feat_std_mean"
-                            ] = per_feat_std.mean().item()
-                            log_data[
-                                f"train/action_collapse/level_{level}/per_feat_std_max"
-                            ] = per_feat_std.max().item()
+                            log_data[f"train/action_collapse/level_{level}/per_feat_std_min"] = (
+                                per_feat_std.min().item()
+                            )
+                            log_data[f"train/action_collapse/level_{level}/per_feat_std_mean"] = (
+                                per_feat_std.mean().item()
+                            )
+                            log_data[f"train/action_collapse/level_{level}/per_feat_std_max"] = (
+                                per_feat_std.max().item()
+                            )
 
                         for level in range(1, h_jepa_module.num_levels + 1):
                             enc_l = encodings[level]  # [B, D, T_l, H', W']
                             D = enc_l.shape[1]
-                            flat_enc = enc_l.permute(0, 2, 3, 4, 1).reshape(
-                                -1, D
-                            )  # [B*T*H'*W', D]
+                            flat_enc = enc_l.permute(0, 2, 3, 4, 1).reshape(-1, D)  # [B*T*H'*W', D]
                             vis_std = flat_enc.std(dim=0)  # [D]
-                            log_data[
-                                f"train/visual_collapse/level_{level}/per_feat_std_min"
-                            ] = vis_std.min().item()
-                            log_data[
-                                f"train/visual_collapse/level_{level}/per_feat_std_mean"
-                            ] = vis_std.mean().item()
+                            log_data[f"train/visual_collapse/level_{level}/per_feat_std_min"] = vis_std.min().item()
+                            log_data[f"train/visual_collapse/level_{level}/per_feat_std_mean"] = vis_std.mean().item()
 
                 # Multi-batch effective rank metrics
                 log_data.update(rank_acc.compute())
@@ -585,12 +528,7 @@ def run(
                 if is_main and cfg.logging.get("log_wandb"):
                     wandb.log(log_data, step=global_step)
 
-            if (
-                is_main
-                and enable_eval
-                and (global_step + 1) % cfg.meta.eval_every_itr == 0
-                and global_step > 0
-            ):
+            if is_main and enable_eval and (global_step + 1) % cfg.meta.eval_every_itr == 0 and global_step > 0:
                 action_stats_batches = cfg.logging.get("action_stats_num_batches", 20)
                 compute_and_save_action_stats(
                     h_jepa_module,
@@ -618,11 +556,7 @@ def run(
                 if cfg.logging.get("log_wandb"):
                     wandb.log(eval_results, step=global_step)
 
-            if (
-                is_main
-                and (global_step + 1) % cfg.meta.light_eval_freq == 0
-                and global_step > 0
-            ):
+            if is_main and (global_step + 1) % cfg.meta.light_eval_freq == 0 and global_step > 0:
                 eval_results = launch_unroll_eval(
                     h_jepa_module,
                     env_creator,
@@ -662,17 +596,13 @@ def run(
 
         if is_main:
             ckpt_extra = {
-                "xy_heads_state_dict": {
-                    level: unwrap_model(head).state_dict()
-                    for level, head in xy_heads.items()
-                },
+                "xy_heads_state_dict": {level: unwrap_model(head).state_dict() for level, head in xy_heads.items()},
                 "probe_optimizer_state_dict": probe_optimizer.state_dict(),
                 "probe_scheduler_state_dict": probe_scheduler.state_dict(),
             }
             if visual_decoders:
                 ckpt_extra["visual_decoders_state_dict"] = {
-                    level: unwrap_model(vd).state_dict()
-                    for level, vd in visual_decoders.items()
+                    level: unwrap_model(vd).state_dict() for level, vd in visual_decoders.items()
                 }
 
             save_training_state(

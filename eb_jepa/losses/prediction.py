@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import List
 
 import lpips as lpips_lib
@@ -226,12 +224,8 @@ class LPIPSLoss(nn.Module):
         B, C, T, H, W = decoded.shape
         mse = F.mse_loss(decoded, target)
 
-        decoded_bt = decoded.permute(0, 2, 1, 3, 4).reshape(
-            B * T, C, H, W
-        )  # [B*T, C, H, W]
-        target_bt = target.permute(0, 2, 1, 3, 4).reshape(
-            B * T, C, H, W
-        )  # [B*T, C, H, W]
+        decoded_bt = decoded.permute(0, 2, 1, 3, 4).reshape(B * T, C, H, W)  # [B*T, C, H, W]
+        target_bt = target.permute(0, 2, 1, 3, 4).reshape(B * T, C, H, W)  # [B*T, C, H, W]
 
         with torch.amp.autocast("cuda", enabled=False):
             unnorm_dec = self._inverse_normalize(decoded_bt.float())
@@ -244,9 +238,7 @@ class LPIPSLoss(nn.Module):
             else:
                 lpips_chunks = []
                 for i in range(0, N, chunk):
-                    lp = self.lpips_fn(
-                        unnorm_dec[i : i + chunk], unnorm_tgt[i : i + chunk]
-                    )
+                    lp = self.lpips_fn(unnorm_dec[i : i + chunk], unnorm_tgt[i : i + chunk])
                     lpips_chunks.append(lp)
                 lpips_val = torch.cat(lpips_chunks, dim=0).mean()
 

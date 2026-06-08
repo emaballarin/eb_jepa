@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import torch
 from torchvision import transforms
 
@@ -85,9 +84,7 @@ class VideoTransform(object):
         )
 
         self.spatial_transform = (
-            video_transforms.random_resized_crop_with_shift
-            if motion_shift
-            else video_transforms.random_resized_crop
+            video_transforms.random_resized_crop_with_shift if motion_shift else video_transforms.random_resized_crop
         )
 
         self.reprob = reprob
@@ -153,9 +150,7 @@ class VideoTransform(object):
         if self.random_horizontal_flip:
             buffer, _ = video_transforms.horizontal_flip(0.5, buffer)
 
-        buffer = _tensor_normalize_inplace(
-            buffer, self.mean, self.std, do_255_to_1=self.do_255_to_1
-        )
+        buffer = _tensor_normalize_inplace(buffer, self.mean, self.std, do_255_to_1=self.do_255_to_1)
         if self.reprob > 0:
             self.erase_transform.device = buffer.device
             buffer = buffer.permute(1, 0, 2, 3)  # C T H W -> T C H W

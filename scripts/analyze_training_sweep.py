@@ -42,8 +42,8 @@ import json
 import logging
 import re
 import warnings
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import matplotlib
 
@@ -270,9 +270,7 @@ def _extract_step_number(step_dir_name: str) -> int:
     return int(m.group(1)) if m else -1
 
 
-def _extract_unroll_metric(
-    df_csv: pd.DataFrame, csv_base: str, level: int
-) -> float | None:
+def _extract_unroll_metric(df_csv: pd.DataFrame, csv_base: str, level: int) -> float | None:
     """Extract an aggregate unroll metric from an eval.csv DataFrame.
 
     Tries precomputed aggregate column first, then falls back to averaging
@@ -298,22 +296,14 @@ def _extract_unroll_metric(
     # Fall back to averaging per-timestep columns
     per_t_cols = [c for c in df_csv.columns if c.startswith(f"{prefix}/{csv_base}/")]
     if per_t_cols:
-        vals = [
-            float(df_csv[c].iloc[-1])
-            for c in per_t_cols
-            if pd.notna(df_csv[c].iloc[-1])
-        ]
+        vals = [float(df_csv[c].iloc[-1]) for c in per_t_cols if pd.notna(df_csv[c].iloc[-1])]
         if vals:
             return float(np.mean(vals))
 
     # Special case: prediction_lpips from per-timestep mean_lpips - mean_lpips_recon
     if csv_base == "prediction_lpips":
-        lpips_cols = sorted(
-            c for c in df_csv.columns if c.startswith(f"{prefix}/mean_lpips/")
-        )
-        recon_cols = sorted(
-            c for c in df_csv.columns if c.startswith(f"{prefix}/mean_lpips_recon/")
-        )
+        lpips_cols = sorted(c for c in df_csv.columns if c.startswith(f"{prefix}/mean_lpips/"))
+        recon_cols = sorted(c for c in df_csv.columns if c.startswith(f"{prefix}/mean_lpips_recon/"))
         if lpips_cols and recon_cols and len(lpips_cols) == len(recon_cols):
             diffs = []
             for lc, rc in zip(lpips_cols, recon_cols):
@@ -403,16 +393,14 @@ def collect_disk_results(
             if result is None:
                 continue
             found_any = True
-            rows.append(
-                {
-                    METRIC: result[METRIC],
-                    "avg_episode_time": result["avg_episode_time"],
-                    "eval_tag": eval_tag_dir.name,
-                    "seed": seed,
-                    "model_folder": str(model_dir),
-                    **hparams,
-                }
-            )
+            rows.append({
+                METRIC: result[METRIC],
+                "avg_episode_time": result["avg_episode_time"],
+                "eval_tag": eval_tag_dir.name,
+                "seed": seed,
+                "model_folder": str(model_dir),
+                **hparams,
+            })
 
         if not found_any:
             missing += 1
@@ -477,14 +465,12 @@ def collect_unroll_results(
             missing += 1
             continue
 
-        rows.append(
-            {
-                METRIC: float(np.mean(metric_vals)),
-                "seed": seed,
-                "model_folder": str(model_dir),
-                **hparams,
-            }
-        )
+        rows.append({
+            METRIC: float(np.mean(metric_vals)),
+            "seed": seed,
+            "model_folder": str(model_dir),
+            **hparams,
+        })
 
     if missing > 0:
         logger.info(f"Skipped {missing} model folders (no unroll_eval results)")
@@ -550,9 +536,7 @@ def collect_wandb_summary_results(
         log_val, log_epoch = None, None
         logs = sorted(model_dir.glob("wandb/run-*/files/output.log"))
         if logs:
-            log_val, log_epoch = _parse_latest_metric_from_log(
-                logs[-1], summary_pattern
-            )
+            log_val, log_epoch = _parse_latest_metric_from_log(logs[-1], summary_pattern)
 
         # Fall back to wandb-summary.json (synced to disk infrequently)
         summary_val, summary_epoch = None, None
@@ -576,9 +560,7 @@ def collect_wandb_summary_results(
         elif summary_val is not None:
             metric_val, epoch = summary_val, summary_epoch
 
-        if metric_val is None or (
-            isinstance(metric_val, float) and np.isnan(metric_val)
-        ):
+        if metric_val is None or (isinstance(metric_val, float) and np.isnan(metric_val)):
             missing += 1
             continue
 
@@ -593,9 +575,7 @@ def collect_wandb_summary_results(
         rows.append(row)
 
     if missing > 0:
-        logger.info(
-            f"Skipped {missing} model folders (no wandb summary or matching metric)"
-        )
+        logger.info(f"Skipped {missing} model folders (no wandb summary or matching metric)")
 
     df = pd.DataFrame(rows)
     logger.info(f"Collected {len(df)} wandb summary results from disk")
@@ -639,14 +619,13 @@ def _aggregate_over_seeds(
             sort_ascending.append(True)
 
     agg = (
-        df.groupby(hparam_cols)
+        df
+        .groupby(hparam_cols)
         .agg(count=(METRIC, "count"), **agg_spec)
         .reset_index()
         .sort_values(sort_cols, ascending=sort_ascending)
     )
-    return agg[
-        [mean_col, std_col] + [c for c in agg.columns if c not in (mean_col, std_col)]
-    ]
+    return agg[[mean_col, std_col] + [c for c in agg.columns if c not in (mean_col, std_col)]]
 
 
 def compute_importance(
@@ -673,18 +652,14 @@ def compute_importance(
 
     n_samples = len(X)
     if n_samples < 6:
-        logger.warning(
-            f"Too few samples ({n_samples}) for importance analysis, skipping"
-        )
-        return pd.DataFrame(
-            {
-                "Hyperparameter": display_names,
-                "RF Importance": [float("nan")] * len(display_names),
-                "Permutation Importance": [float("nan")] * len(display_names),
-                "Perm. Imp. Std": [float("nan")] * len(display_names),
-                "Mutual Information": [float("nan")] * len(display_names),
-            }
-        )
+        logger.warning(f"Too few samples ({n_samples}) for importance analysis, skipping")
+        return pd.DataFrame({
+            "Hyperparameter": display_names,
+            "RF Importance": [float("nan")] * len(display_names),
+            "Permutation Importance": [float("nan")] * len(display_names),
+            "Perm. Imp. Std": [float("nan")] * len(display_names),
+            "Mutual Information": [float("nan")] * len(display_names),
+        })
 
     rf = RandomForestRegressor(n_estimators=500, max_depth=6, random_state=42)
     rf.fit(X, y)
@@ -694,15 +669,14 @@ def compute_importance(
     mi = mutual_info_regression(X, y, random_state=42, n_neighbors=n_neighbors)
 
     return (
-        pd.DataFrame(
-            {
-                "Hyperparameter": display_names,
-                "RF Importance": rf.feature_importances_,
-                "Permutation Importance": perm.importances_mean,
-                "Perm. Imp. Std": perm.importances_std,
-                "Mutual Information": mi,
-            }
-        )
+        pd
+        .DataFrame({
+            "Hyperparameter": display_names,
+            "RF Importance": rf.feature_importances_,
+            "Permutation Importance": perm.importances_mean,
+            "Perm. Imp. Std": perm.importances_std,
+            "Mutual Information": mi,
+        })
         .sort_values("Permutation Importance", ascending=False)
         .reset_index(drop=True)
     )
@@ -724,22 +698,16 @@ def compute_correlations(
         else:
             vals = df[col].values.astype(float)
         if len(set(vals)) < 2:
-            rows.append(
-                {
-                    "Hyperparameter": col,
-                    "Spearman rho": float("nan"),
-                    "p-value": float("nan"),
-                }
-            )
+            rows.append({
+                "Hyperparameter": col,
+                "Spearman rho": float("nan"),
+                "p-value": float("nan"),
+            })
         else:
             rho, pval = spearmanr(vals, df[METRIC].values)
             rows.append({"Hyperparameter": col, "Spearman rho": rho, "p-value": pval})
 
-    return (
-        pd.DataFrame(rows)
-        .sort_values("Spearman rho", key=abs, ascending=False)
-        .reset_index(drop=True)
-    )
+    return pd.DataFrame(rows).sort_values("Spearman rho", key=abs, ascending=False).reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------
@@ -769,9 +737,7 @@ def plot_importance_and_correlation(
     axes[0].set_title("Hyperparameter Importance\n(Random Forest Permutation)")
 
     corr_sorted = corr_df.sort_values("Spearman rho")
-    colors_corr = [
-        "#e74c3c" if r < 0 else "#2ecc71" for r in corr_sorted["Spearman rho"]
-    ]
+    colors_corr = ["#e74c3c" if r < 0 else "#2ecc71" for r in corr_sorted["Spearman rho"]]
     axes[1].barh(
         corr_sorted["Hyperparameter"],
         corr_sorted["Spearman rho"],
@@ -903,9 +869,7 @@ def suggest_next_grid(
     for col in hparam_cols:
         if col in df.columns:
             grouped = df.groupby(col)[METRIC].mean()
-            best_values[col] = (
-                grouped.idxmax() if HIGHER_IS_BETTER else grouped.idxmin()
-            )
+            best_values[col] = grouped.idxmax() if HIGHER_IS_BETTER else grouped.idxmin()
 
     # Sort params by importance ascending (for un-fixing order)
     imp_sorted = importance_df.sort_values("Permutation Importance", ascending=True)
@@ -925,20 +889,12 @@ def suggest_next_grid(
 
         if perm_imp < median_imp:
             new_grid[param] = [best_val]
-            decisions.append(
-                f"  {param}: FIXED to {best_val} (low importance: {perm_imp:.4f})"
-            )
+            decisions.append(f"  {param}: FIXED to {best_val} (low importance: {perm_imp:.4f})")
         elif all(isinstance(v, str) and v.startswith("[") for v in old_vals):
             # Categorical (e.g. level_weights): keep top 2
-            grouped = (
-                df.groupby(param)[METRIC]
-                .mean()
-                .sort_values(ascending=not HIGHER_IS_BETTER)
-            )
+            grouped = df.groupby(param)[METRIC].mean().sort_values(ascending=not HIGHER_IS_BETTER)
             new_grid[param] = list(grouped.index[:2])
-            decisions.append(
-                f"  {param}: KEEP top 2: {new_grid[param]} (importance: {perm_imp:.4f})"
-            )
+            decisions.append(f"  {param}: KEEP top 2: {new_grid[param]} (importance: {perm_imp:.4f})")
         else:
             # Numeric: expand around best
             sorted_vals = sorted(float(v) for v in old_vals)
@@ -956,9 +912,7 @@ def suggest_next_grid(
             else:
                 candidates = sorted(candidates)
             new_grid[param] = candidates
-            decisions.append(
-                f"  {param}: EXPAND to {candidates} (importance: {perm_imp:.4f}, best={best_val})"
-            )
+            decisions.append(f"  {param}: EXPAND to {candidates} (importance: {perm_imp:.4f}, best={best_val})")
 
     new_grid["seed"] = original_param_grid.get(SEED_KEY, [1, 1000, 10000])
 
@@ -974,9 +928,7 @@ def suggest_next_grid(
             break
         if param in new_grid and len(new_grid[param]) <= 1 and param in orig_display:
             new_grid[param] = orig_display[param]
-            decisions.append(
-                f"  {param}: UN-FIXED to {orig_display[param]} (grid too small)"
-            )
+            decisions.append(f"  {param}: UN-FIXED to {orig_display[param]} (grid too small)")
 
     # Phase 3: densify high-importance params if still too small
     for param in reversed(param_order):
@@ -1010,9 +962,7 @@ def suggest_next_grid(
         print(d)
     print(f"\nTotal combinations: {total} (target: ~{target_size})")
     if total < target_size * 0.5:
-        print(
-            f"\nWarning: grid is small ({total} runs). Consider expanding fixed params."
-        )
+        print(f"\nWarning: grid is small ({total} runs). Consider expanding fixed params.")
     elif total > target_size * 1.5:
         print(f"\nWarning: grid is large ({total} runs). Consider fixing more params.")
 
@@ -1027,14 +977,7 @@ def suggest_next_grid(
             for v in vals:
                 print(f"      - {v}")
         else:
-            clean = [
-                (
-                    int(v)
-                    if isinstance(v, (float, np.integer)) and float(v) == int(float(v))
-                    else v
-                )
-                for v in vals
-            ]
+            clean = [(int(v) if isinstance(v, (float, np.integer)) and float(v) == int(float(v)) else v) for v in vals]
             print(f"    {yaml_key}: {clean}")
 
     return new_grid
@@ -1108,9 +1051,7 @@ def main():
         if not sd.is_dir():
             parser.error(f"Sweep directory does not exist: {sd}")
     if len(sweep_dirs) > 1 and args.output_dir is None:
-        parser.error(
-            "--output-dir is required when combining multiple sweep directories"
-        )
+        parser.error("--output-dir is required when combining multiple sweep directories")
     output_dir = Path(args.output_dir) if args.output_dir else sweep_dirs[0]
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1126,9 +1067,7 @@ def main():
     metric_info = _METRIC_INFO[METRIC]
     if METRIC == "success_rate":
         # plan_eval/ flow: one row per (model_folder, eval_tag)
-        df_all = collect_disk_results(
-            sweep_dirs, sweep_params, avg_last_n=args.avg_last_n
-        )
+        df_all = collect_disk_results(sweep_dirs, sweep_params, avg_last_n=args.avg_last_n)
         if df_all.empty:
             print("No completed runs found. Exiting.")
             return
@@ -1139,7 +1078,8 @@ def main():
         #    the best eval_tag per training config.
         group_cols = hparam_cols + ["eval_tag"]
         per_tag = (
-            df_all.groupby(group_cols)
+            df_all
+            .groupby(group_cols)
             .agg(
                 mean_sr=(METRIC, "mean"),
                 mean_time=("avg_episode_time", "mean"),

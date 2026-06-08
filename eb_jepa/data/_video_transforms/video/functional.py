@@ -4,7 +4,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import numbers
 
 import cv2
@@ -31,8 +30,7 @@ def crop_clip(clip, min_h, min_w, h, w):
 
     else:
         raise TypeError(
-            "Expected numpy.ndarray or PIL.Image or torch.Tensor):"
-            + "but got list of {0}".format(type(clip[0]))
+            "Expected numpy.ndarray or PIL.Image or torch.Tensor):" + "but got list of {0}".format(type(clip[0]))
         )
     return cropped
 
@@ -86,8 +84,7 @@ def resize_clip(clip, size, interpolation="bilinear"):
         scaled = [img.resize(size, pil_inter) for img in clip]
     else:
         raise TypeError(
-            "Expected numpy.ndarray or PIL.Image or torch.Tensor"
-            + "but got list of {0}".format(type(clip[0]))
+            "Expected numpy.ndarray or PIL.Image or torch.Tensor" + "but got list of {0}".format(type(clip[0]))
         )
     return scaled
 

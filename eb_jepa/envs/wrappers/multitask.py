@@ -2,7 +2,6 @@
 # All rights reserved.
 # The below code is inspired from TD-MPC2 https://github.com/nicklashansen/tdmpc2
 # licensed under the MIT License
-
 import gym
 import numpy as np
 import torch
@@ -30,12 +29,8 @@ class MultitaskWrapper(gym.Wrapper):
         if self.cfg.task_specification.obs in ["rgb", "rgb_state"]:
             self.observation_space = self.envs[0].observation_space
         elif self.cfg.task_specification.obs == "state":
-            self.observation_space = gym.spaces.Box(
-                low=-np.inf, high=np.inf, shape=self._obs_shape, dtype=np.float32
-            )
-        self.action_space = gym.spaces.Box(
-            low=-1, high=1, shape=(self._action_dim,), dtype=np.float32
-        )
+            self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=self._obs_shape, dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self._action_dim,), dtype=np.float32)
 
     @property
     def task(self):
@@ -54,16 +49,14 @@ class MultitaskWrapper(gym.Wrapper):
 
     def _pad_obs(self, obs):
         if obs[0].shape != self._obs_shape:
-            obs = torch.cat(
-                (
-                    obs,
-                    torch.zeros(
-                        self._obs_shape[0] - obs.shape[0],
-                        dtype=obs.dtype,
-                        device=obs.device,
-                    ),
-                )
-            )
+            obs = torch.cat((
+                obs,
+                torch.zeros(
+                    self._obs_shape[0] - obs.shape[0],
+                    dtype=obs.dtype,
+                    device=obs.device,
+                ),
+            ))
         return obs
 
     def reset(self, task_idx=-1, **kwargs):

@@ -6,7 +6,6 @@ Supports CIFAR-10 (32×32, 10 classes) and ImageNet1k (224×224, 1000 classes).
 
 from typing import Optional
 
-import torch
 import torch.utils.data
 import torchvision.transforms as transforms
 
@@ -30,9 +29,7 @@ def get_dataset_info(dataset: str) -> tuple[int, int]:
         Tuple of (image_size, num_classes).
     """
     if dataset not in DATASET_INFO:
-        raise ValueError(
-            f"Unknown dataset: {dataset}. Choose from {list(DATASET_INFO)}"
-        )
+        raise ValueError(f"Unknown dataset: {dataset}. Choose from {list(DATASET_INFO)}")
     info = DATASET_INFO[dataset]
     return info[0], info[3]
 
@@ -134,9 +131,7 @@ def get_train_transforms(
         aug_ops = [
             RandomResizedCrop(image_size, scale=scale),
             HorizontalFlip(prob=0.5),
-            ColorJitter(
-                brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, prob=0.8
-            ),
+            ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, prob=0.8),
             Grayscale(prob=0.2),
             GaussianBlur(kernel_size=23, prob=0.5),
             Solarization(prob=0.1),
@@ -145,17 +140,13 @@ def get_train_transforms(
         scale = crop_scale if crop_scale is not None else (0.2, 1.0)
         aug_ops = [
             RandomResizedCrop(image_size, scale=scale),
-            ColorJitter(
-                brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, prob=0.8
-            ),
+            ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, prob=0.8),
             Grayscale(prob=0.2),
             Solarization(prob=0.1),
             HorizontalFlip(prob=0.5),
         ]
 
-    return transforms.Compose(
-        aug_ops + [transforms.ToTensor(), transforms.Normalize(mean, std)]
-    )
+    return transforms.Compose(aug_ops + [transforms.ToTensor(), transforms.Normalize(mean, std)])
 
 
 def make_transforms(cfg, dataset: str) -> list[transforms.Compose]:
@@ -183,9 +174,7 @@ def make_transforms(cfg, dataset: str) -> list[transforms.Compose]:
     local_crop_size = cfg.data.get("local_crop_size", None)
 
     global_t = get_train_transforms(dataset, crop_scale=global_scale)
-    local_t = get_train_transforms(
-        dataset, crop_scale=local_scale, image_size=local_crop_size
-    )
+    local_t = get_train_transforms(dataset, crop_scale=local_scale, image_size=local_crop_size)
     return [global_t] * n_global + [local_t] * (num_views - n_global)
 
 

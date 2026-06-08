@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 import os
 import socket
@@ -67,11 +65,7 @@ def setup_distributed() -> tuple[int, int, bool]:
             os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
             os.environ["RANK"] = os.environ["SLURM_PROCID"]
             os.environ["LOCAL_RANK"] = os.environ["SLURM_LOCALID"]
-            os.environ["MASTER_ADDR"] = (
-                os.environ["HOSTNAME"]
-                if "HOSTNAME" in os.environ
-                else socket.gethostname()
-            )
+            os.environ["MASTER_ADDR"] = os.environ["HOSTNAME"] if "HOSTNAME" in os.environ else socket.gethostname()
         except Exception:
             return 0, 1, True
 
@@ -104,9 +98,7 @@ def setup_distributed() -> tuple[int, int, bool]:
     if not is_main:
         logging.getLogger("eb_jepa").setLevel(logging.WARNING)
 
-    logger.info(
-        f"Distributed: rank={rank}, local_rank={local_rank}, world_size={world_size}"
-    )
+    logger.info(f"Distributed: rank={rank}, local_rank={local_rank}, world_size={world_size}")
     return local_rank, world_size, is_main
 
 
@@ -152,9 +144,7 @@ def unwrap_model(model: nn.Module) -> nn.Module:
 
 def unwrap_state_dict(sd: dict) -> dict:
     """Strip ``module.`` and ``_orig_mod.`` prefixes from state-dict keys."""
-    return {
-        k.replace("_orig_mod.", "").replace("module.", ""): v for k, v in sd.items()
-    }
+    return {k.replace("_orig_mod.", "").replace("module.", ""): v for k, v in sd.items()}
 
 
 def make_sampler(dataset) -> Optional[DistributedSampler]:
@@ -171,14 +161,9 @@ def local_batch_size(global_batch_size: int) -> int:
     *N* GPUs the DataLoader on each rank should use ``global_batch_size // N``.
     On a single GPU (or without distributed init) this is a no-op.
     """
-    world_size = (
-        dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
-    )
+    world_size = dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
     if global_batch_size % world_size != 0:
-        raise ValueError(
-            f"global batch_size ({global_batch_size}) must be divisible by "
-            f"world_size ({world_size})"
-        )
+        raise ValueError(f"global batch_size ({global_batch_size}) must be divisible by world_size ({world_size})")
     return global_batch_size // world_size
 
 
