@@ -99,10 +99,19 @@ flag** — a bare `key=value` token is parsed as a positional arg and lands in
 `cfg`/`folder` (which raises `AttributeError: 'str' object has no attribute
 'meta'`). Booleans **must be Python-capitalized** (`--logging.log_wandb=False`);
 lowercase `false` is kept as the string `"false"` (truthy!). Examples:
-`--data.batch_size=256`, `--optim.lr=5e-4`, `--optim.epochs=100`.
+`--optim.lr=5e-4`, `--optim.epochs=100`.
 
-Walltimes are generous (the model is tiny: `ResNet5` henc=32 + `ResUNet` on
-64×64 frames) and within each partition's max (debug 15 min, gpua/gpuv 24 h).
+**Batch size & GPU memory.** All scripts use the config default
+`data.batch_size=16` — what the example is tuned for and what the published
+results use. The predictor (`ResUNet`) runs at full 64×64 resolution across the
+T=10 frame sequence and the `model.steps=4` rollout, so activation memory is far
+larger than the small parameter count suggests: **measured ≈ 0.6 GB/sample** at
+the default 4-step rollout (bs=128 alone used ~76 GB and OOM'd an 80 GB A100).
+Rough safe ceilings at `steps=4`: **V100 16 GB → bs ≤ ~16–24**, **A100 80 GB →
+bs ≤ ~96**. Increase `--data.batch_size` only with headroom; memory also scales
+with `--model.steps`.
+
+Walltimes are within each partition's max (debug 15 min, gpua/gpuv 24 h).
 
 ## Troubleshooting
 
@@ -116,3 +125,8 @@ Walltimes are generous (the model is tiny: `ResNet5` henc=32 + `ResUNet` on
 - **Job stalls at "Downloading"** — something tried to fetch over the network on
   an offline node. The dataset is the usual culprit: confirm
   `$EBJEPA_DSETS/mnist_test_seq.npy` exists and `EBJEPA_DSETS` is exported.
+- **`torch.OutOfMemoryError` / "CUDA out of memory"** — `data.batch_size` is too
+  high for the GPU (memory ≈ 0.6 GB/sample at `model.steps=4`). Lower
+  `--data.batch_size` (default 16 is safe everywhere); the scripts already set
+  `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to cut fragmentation. See
+  the batch-size note under **Tuning**.

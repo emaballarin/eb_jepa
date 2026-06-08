@@ -30,6 +30,9 @@ export WANDB_MODE=offline
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 
+# Reduce allocator fragmentation (see the CUDA-OOM note in README)
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 mkdir -p "$EBJEPA_CKPTS"
 source "$VENV/bin/activate"
 cd "$REPO_DIR"
@@ -43,6 +46,6 @@ srun python -m examples.video_jepa.main \
   --fname=examples/video_jepa/cfgs/default.yaml \
   --logging.log_wandb=False \
   --logging.tqdm_silent=True \
-  --data.batch_size=64 \
+  --data.batch_size=16 \
   --data.num_workers=4 \
   --optim.epochs=50
