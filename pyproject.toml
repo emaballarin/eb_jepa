@@ -52,7 +52,7 @@ dependencies = [
     "shapely",
     "pybullet",
     "mujoco>=3.9.0",
-    "dm-control>=1.0.41",
+    "dm-control>=1.0.43",
     "metaworld",
 ]
 requires-python = ">=3.12"
