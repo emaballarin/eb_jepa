@@ -70,7 +70,7 @@ profile = "black"
 
 [dependency-groups]
 dev = [
-    "black>=25.1.0",
+    "black>=26.5.1",
     "isort>=8.0.1",
     "pytest>=8.4.1",
     "autoflake",
