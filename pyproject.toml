@@ -51,7 +51,7 @@ dependencies = [
     "pymunk>=6.8.0",
     "shapely",
     "pybullet",
-    "mujoco>=3.9.0",
+    "mujoco>=3.10.0",
     "dm-control>=1.0.43",
     "metaworld",
 ]
