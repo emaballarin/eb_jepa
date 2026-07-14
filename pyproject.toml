@@ -25,7 +25,7 @@ dependencies = [
     "pudb>=2025.1",
     "scikit-learn>=1.9.0",
     "tiktoken>=0.13.0",
-    "torch>=2.12",
+    "torch>=2.13.0",
     "torchcodec>=0.14.0",
     "torchvision",
     "transformers",
