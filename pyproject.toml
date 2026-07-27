@@ -29,7 +29,7 @@ dependencies = [
     "torchcodec>=0.14.0",
     "torchvision",
     "transformers",
-    "wandb[media]>=0.21.1",
+    "wandb[media]>=0.28.0",
     "gymnasium>=1.3.0",
     "imageio",
     "lpips>=0.1.4",
